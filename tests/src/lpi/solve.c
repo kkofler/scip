@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -782,6 +782,10 @@ Test(solve, test4)
    SCIP_Real lhs[2];
    SCIP_Real lb[2];
    SCIP_Real ub[2];
+
+   /* Mosek will return either primal or dual infeasiblity, so we cannot detect that both are infeasible. */
+   if ( strncmp(SCIPlpiGetSolverName(), "MOSEK", 5) == 0 )
+      return;
 
    /* fill variable data */
    lb[0] = -SCIPlpiInfinity(lpi);

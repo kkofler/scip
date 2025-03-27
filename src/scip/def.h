@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -122,31 +122,12 @@
 #endif
 
 
-
-#include "scip/type_retcode.h"
-#include "scip/type_message.h"
-#include "scip/pub_message.h"
-#include "scip/type_rational.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #define SCIP_VERSION     (100*SCIP_VERSION_MAJOR + 10*SCIP_VERSION_MINOR + SCIP_VERSION_PATCH) /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< SCIP sub version number */
+#define SCIP_VERSION_SUB 0                 /**< @deprecated SCIP sub version number. Always 0. */
+#define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< @deprecated SCIP sub version number. Always 0. */
 #define SCIP_APIVERSION  SCIP_VERSION_API  /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)"
 
-
-/*
- * CIP format variable characters
- */
-
-#define SCIP_VARTYPE_BINARY_CHAR 'B'
-#define SCIP_VARTYPE_INTEGER_CHAR 'I'
-#define SCIP_VARTYPE_IMPLINT_CHAR 'M'
-#define SCIP_VARTYPE_CONTINUOUS_CHAR 'C'
 
 /*
  * Long Integer values
@@ -443,10 +424,6 @@ extern "C" {
 #else
 #  define SCIP_DEPRECATED
 #endif
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif

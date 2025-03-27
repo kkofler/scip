@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -208,15 +208,15 @@ SCIP_RETCODE ensureNumOverlapsVertices(
 
 /** @brief creates a hypergraph */
 SCIP_RETCODE SCIPhypergraphCreate(
-   SCIP_HYPERGRAPH**     phypergraph,            /**< Pointer for storing the hypergraph. */
-   BMS_BLKMEM*           blkmem,                 /**< Block memory for storage. */
-   int                   memvertices,            /**< Upper bound on expected number of vertices. */
-   int                   memedges,               /**< Upper bound on expected number of edges. */
-   int                   memoverlaps,            /**< Upper bound on expected number of overlaps. */
-   int                   memedgesvertices,       /**< Upper bound on expected average size of edges. */
-   size_t                sizevertexdata,         /**< Size (in bytes) of additional vertex data. */
-   size_t                sizeedgedata,           /**< Size (in bytes) of additional edge data. */
-   size_t                sizeoverlapdata         /**< Size (in bytes) of additional overlap data. */
+   SCIP_HYPERGRAPH**     phypergraph,        /**< Pointer for storing the hypergraph. */
+   BMS_BLKMEM*           blkmem,             /**< Block memory for storage. */
+   int                   memvertices,        /**< Upper bound on expected number of vertices. */
+   int                   memedges,           /**< Upper bound on expected number of edges. */
+   int                   memoverlaps,        /**< Upper bound on expected number of overlaps. */
+   int                   memedgesvertices,   /**< Upper bound on expected average size of edges. */
+   size_t                sizevertexdata,     /**< Size (in bytes) of additional vertex data. */
+   size_t                sizeedgedata,       /**< Size (in bytes) of additional edge data. */
+   size_t                sizeoverlapdata     /**< Size (in bytes) of additional overlap data. */
    )
 {
    SCIP_HYPERGRAPH* hypergraph;
@@ -588,7 +588,7 @@ SCIP_RETCODE SCIPhypergraphComputeOverlaps(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
    SCIP_DECL_HYPERGRAPH_OVERLAP((*handler)), /**< Function to be called once the overlap is found. */
    void*                 userdata            /**< Pointer passed to \p handler. */
-)
+   )
 {
    int memCommonVertices = 32;
    int* commonVertices = NULL;
@@ -1825,7 +1825,7 @@ SCIP_HYPERGRAPH_VERTEXDATA* SCIPhypergraphVertexData(
 /** @brief returns additional data of \p edge */
 SCIP_HYPERGRAPH_EDGEDATA* SCIPhypergraphEdgeData(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
-   SCIP_HYPERGRAPH_EDGE  edge                 /**< An edge. */
+   SCIP_HYPERGRAPH_EDGE  edge                /**< An edge. */
    )
 {
    assert(hypergraph != NULL);

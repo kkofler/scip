@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -124,7 +124,7 @@ struct SCIP_LpSolVals
    SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
-   SCIP_Bool             hasprovedbound;     /**< is the current LP provably dual feasible (in exact mode) */
+   SCIP_Bool             hasprovedboundexact;     /**< is the current LP provably dual feasible (in exact mode) */
 };
 
 /** LP column;
@@ -186,6 +186,7 @@ struct SCIP_Col
    unsigned int          ubchanged:1;        /**< has upper bound changed, and has data of LP solver to be updated? */
    unsigned int          coefchanged:1;      /**< has the coefficient vector changed, and has LP solver to be updated? */
    unsigned int          integral:1;         /**< is associated variable of integral type? */
+   unsigned int          impliedintegral:1;  /**< is associated variable implied integral? */
    unsigned int          removable:1;        /**< is column removable from the LP (due to aging or cleanup)? */
    unsigned int          sbdownvalid:1;      /**< stores whether the stored strong branching down value is a valid dual bound;
                                               *   otherwise, it can only be used as an estimate value */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -419,6 +419,15 @@ SCIP_RETCODE SCIPbendersSetMastervarsCont(
 SCIP_Bool SCIPbendersGetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber          /**< the subproblem number */
+   );
+
+/** sets the objective type for the aggregation of the Benders' decomposition subproblem objectives. This is either the
+ * summation of the objective values or a minimax of the objective values (such as for a makespan objective)
+ */
+SCIP_EXPORT
+void SCIPbendersSetObjectiveType(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSOBJTYPE   objectivetype       /**< the objective type */
    );
 
 /** adds the data for the generated cuts to the Benders' cut storage */

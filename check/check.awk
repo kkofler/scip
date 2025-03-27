@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -535,15 +535,28 @@ BEGIN {
    inoriginalprob = 0;
 }
 /^  Variables        :/ {
+   #With SCIP 10, the print changed to reflect the new variable types.
+   #We accept both logs from before and after
    if( inoriginalprob )
       origvars = $3;
    else
    {
-      vars = $3;
-      intvars = $6;
-      implvars = $8;
-      contvars = $11;
-      binvars = vars - intvars - implvars - contvars;
+      if( $9 == "continuous)" )
+      {
+         vars = $3;
+         intvars = $6;
+         contvars = $8;
+         implvars = 0;
+         binvars = vars - intvars - contvars;
+      }
+      else
+      {
+         vars = $3;
+         intvars = $6;
+         implvars = $8;
+         contvars = $11;
+         binvars = vars - intvars - implvars - contvars;
+      }
    }
 }
 /^  Constraints      :/ {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -230,7 +230,8 @@ Test(reformbinprods, factorize1)
    /* newexpr is a sum with only one variable; the bounds of the variable correspond to the activities of the bilinear binary terms */
    var = SCIPgetVarExprVar(SCIPexprGetChildren(newexpr)[0]);
    cr_assert(var != NULL);
-   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+   cr_expect(SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_STRONG);
    cr_expect(SCIPvarGetLbGlobal(var) == -2.0);
    cr_expect(SCIPvarGetUbGlobal(var) == 1.0);
 
@@ -262,13 +263,15 @@ Test(reformbinprods, factorize2)
 
    /* first variable represents x0 * (x1 - x2 + x7) and thus has bounds [-1,2]*/
    var = SCIPgetVarExprVar(SCIPexprGetChildren(newexpr)[0]);
-   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+   cr_expect(SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_STRONG);
    cr_expect(SCIPvarGetLbGlobal(var) == -1.0);
    cr_expect(SCIPvarGetUbGlobal(var) == 2.0);
 
    /* second variable represents  x3 * (-x4 -x5) and thus has bounds [-2,0]*/
    var = SCIPgetVarExprVar(SCIPexprGetChildren(newexpr)[1]);
-   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+   cr_expect(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+   cr_expect(SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_STRONG);
    cr_expect(SCIPvarGetLbGlobal(var) == -2.0);
    cr_expect(SCIPvarGetUbGlobal(var) == 0.0);
 

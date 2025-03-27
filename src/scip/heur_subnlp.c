@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -258,6 +258,7 @@ SCIP_RETCODE createSubSCIP(
          TRUE,  /* eventhandler */
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
          FALSE, /* branchrules */
+         FALSE, /* iis */
          TRUE,  /* displays */
          FALSE, /* tables */
          FALSE, /* dialogs */
@@ -1373,7 +1374,8 @@ SCIP_RETCODE forbidFixation(
          fixval = SCIPvarGetLbGlobal(subvar);
          assert(fixval == SCIPvarGetUbGlobal(subvar)); /* variable should be fixed in sub-SCIP */   /*lint !e777*/
          assert(SCIPceil(scip, fixval - 0.5) == fixval); /* we have rounded values before fixing */ /*lint !e777*/
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var)
+               || SCIPvarGetLbGlobal(var) == fixval || SCIPvarGetUbGlobal(var) == fixval); /* for binaries, the fixval should be either 0.0 or 1.0 */  /*lint !e777*/
 
          if( SCIPvarGetLbGlobal(var) < fixval )
          {

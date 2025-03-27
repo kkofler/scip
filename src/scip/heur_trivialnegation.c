@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -133,7 +133,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 
       transvar = vars[i];
 
-      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[i]) )
       {
          SCIP_Real obj;
          SCIP_Real newcoef;
@@ -144,8 +144,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
          if( SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
             continue;
 
-         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip), &oldcoef));
-         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip)-1, &newcoef));
+         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip), &oldcoef) );
+         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip)-1, &newcoef) );
 
          /* check if variable entered or left the objective, or if its objective coefficient changed sign */
          changed = FALSE;
@@ -267,6 +267,9 @@ SCIP_RETCODE SCIPincludeHeurTrivialnegation(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivialnegation, NULL) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrivialnegation) );

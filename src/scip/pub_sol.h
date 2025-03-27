@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -36,6 +36,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_sol.h"
 #include "scip/type_heur.h"
 #include "scip/type_relax.h"
@@ -82,7 +83,7 @@ SCIP_Real SCIPsolGetOrigObj(
 SCIP_EXPORT
 void SCIPsolOrigAddObjvalExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        addval              /**< offset value to add */
+   SCIP_RATIONAL*        addval              /**< offset value to add */
    );
 
 /** gets clock time, when this solution was found */

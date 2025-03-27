@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -246,8 +246,10 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       if( subvars[i] == NULL )
          continue;
 
-      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_IMPLINT);
+      assert(SCIPvarIsImpliedIntegral(subvars[i]));
       SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
+      assert(!infeasible);
+      SCIP_CALL( SCIPchgVarImplType(subscip, subvars[i], SCIP_IMPLINTTYPE_NONE, &infeasible) );
       assert(!infeasible);
    }
 

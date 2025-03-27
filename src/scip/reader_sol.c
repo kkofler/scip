@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,7 +40,6 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_sol.h"
 #include "scip/reader_sol.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_param.h"
@@ -176,12 +175,6 @@ SCIP_DECL_READERREAD(readerReadSol)
          filename);
       *result = SCIP_SUCCESS;
       return SCIP_OKAY;
-   }
-
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIPerrorMessage("reading of solution file in exact solving mode is not yet supported\n");
-      return SCIP_READERROR;
    }
 
    /* open input file in order to determine type */

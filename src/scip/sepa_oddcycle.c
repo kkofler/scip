@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2324,7 +2324,7 @@ SCIP_RETCODE separateHeur(
    nbinvars = (unsigned int) nscipbinvars;
    for (l = nscipbinvars; l < nintegral; ++l)
    {
-      assert( SCIPvarGetType(scipvars[l]) != SCIP_VARTYPE_CONTINUOUS ); /*lint !e613*/
+      assert( SCIPvarIsIntegral(scipvars[l]) ); /*lint !e613*/
       if ( SCIPvarIsBinary(scipvars[l]) ) /*lint !e613*/
          vars[nbinvars++] = scipvars[l]; /*lint !e613*/
    }
@@ -3056,7 +3056,7 @@ SCIP_RETCODE separateGLS(
    nbinvars = (unsigned int) nscipbinvars;
    for (k = nscipbinvars; k < nintegral; ++k)
    {
-      assert( SCIPvarGetType(scipvars[k]) != SCIP_VARTYPE_CONTINUOUS ); /*lint !e613*/
+      assert( SCIPvarIsIntegral(scipvars[k]) ); /*lint !e613*/
       if ( SCIPvarIsBinary(scipvars[k]) ) /*lint !e613*/
          vars[nbinvars++] = scipvars[k]; /*lint !e613*/
    }

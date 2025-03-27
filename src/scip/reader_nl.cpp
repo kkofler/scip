@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -54,7 +54,6 @@
 #include "scip/expr_exp.h"
 #include "scip/expr_trig.h"
 #include "scip/expr_abs.h"
-#include "scip/scip_exact.h"
 
 // disable -Wshadow warnings for upcoming includes of AMPL/MP
 // disable -Wimplicit-fallthrough as I don't want to maintain extra comments in AMPL/MP code to suppress these
@@ -848,11 +847,12 @@ public:
       // as far as I see, ampl::mp gives -inf, +inf for no-bounds, which is always beyond SCIPinfinity()
       // we ignore bounds outside [-scipinfinity,scipinfinity] here
       // for binary variables, we also ignore bounds outside [0,1]
-      if( variableLB > (SCIPvarGetType(probdata->vars[variableIndex]) == SCIP_VARTYPE_BINARY ? 0.0 : -SCIPinfinity(scip)) )
+      SCIP_Bool binary = (SCIPvarGetType(probdata->vars[variableIndex]) == SCIP_VARTYPE_BINARY);
+      if( variableLB > (binary ? 0.0 : -SCIPinfinity(scip)) )
       {
          SCIP_CALL_THROW( SCIPchgVarLbGlobal(scip, probdata->vars[variableIndex], variableLB) );
       }
-      if( variableUB < (SCIPvarGetType(probdata->vars[variableIndex]) == SCIP_VARTYPE_BINARY ? 1.0 :  SCIPinfinity(scip)) )
+      if( variableUB < (binary ? 1.0 :  SCIPinfinity(scip)) )
       {
          SCIP_CALL_THROW( SCIPchgVarUbGlobal(scip, probdata->vars[variableIndex], variableUB) );
       }
@@ -1760,12 +1760,6 @@ SCIP_DECL_READERREAD(readerReadNl)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIPerrorMessage("reading of AMPL .nl file in exact solving mode is not yet supported\n");
-      return SCIP_READERROR;
-   }
 
    try
    {

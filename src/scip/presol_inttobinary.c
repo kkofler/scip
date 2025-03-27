@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -107,7 +107,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
       SCIP_Real lb;
       SCIP_Real ub;
 
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(vars[v]));
 
       /* get variable's bounds */
       lb = SCIPvarGetLbGlobal(vars[v]);

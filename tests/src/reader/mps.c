@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -78,4 +78,35 @@ Test(readermps, read2, .description = "check the function for reading a *.mps fi
 
     SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
     cr_expect( SCIPgetNVars(scip) == 5 );
+}
+
+Test(readermps, spaceinrowname, .description = "check for reading with a space in a row name")
+{
+    /* a fixed-form mps file with spaces in row and column names
+     * for this, there is a special treatment (len<14) in reader_mps
+     * it used to work, then broke (maybe only when using windows lineendings),
+     * then was fixed again (by ignoring trailing whitespace for len)
+     */
+    char filename[SCIP_MAXSTRLEN];
+    TESTsetTestfilename(filename, __FILE__, "forplan_begin.mps");
+
+    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+    cr_expect( SCIPgetNVars(scip) == 6 );
+    cr_expect( SCIPgetNConss(scip) == 3 );
+}
+
+Test(readermps, shortlines, .description = "check for reading with short lines")
+{
+    /* a free-form mps file with short row and column names
+     * the special treatment for fixed-form mps in reader_mps (len<14, see above)
+     * prevented a file like this to be read correctly, because "x1 obj 1" was
+     * read treated as a single column name
+     * with a fix that restricts the len<14 special case to the row section this was fixed
+     */
+    char filename[SCIP_MAXSTRLEN];
+    TESTsetTestfilename(filename, __FILE__, "shortlines.mps");
+
+    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+    cr_expect( SCIPgetNVars(scip) == 7 );
+    cr_expect( SCIPgetNConss(scip) == 3 );
 }

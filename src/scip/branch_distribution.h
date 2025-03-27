@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -101,6 +101,7 @@ void SCIPvarCalcDistributionParameters(
    SCIP_Real             varlb,              /**< variable lower bound */
    SCIP_Real             varub,              /**< variable upper bound */
    SCIP_VARTYPE          vartype,            /**< type of the variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Real*            mean,               /**< pointer to store mean value */
    SCIP_Real*            variance            /**< pointer to store the variance of the variable uniform distribution */
    );

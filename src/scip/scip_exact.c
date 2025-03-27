@@ -47,8 +47,6 @@
 #include "scip/benders.h"
 #include "scip/benderscut.h"
 #include "scip/branch.h"
-#include "scip/branchexact.h"
-#include "scip/bounding_exact.h"
 #include "scip/branch_nodereopt.h"
 #include "scip/certificate.h"
 #include "scip/clock.h"
@@ -76,6 +74,7 @@
 #include "scip/implics.h"
 #include "scip/interrupt.h"
 #include "scip/lp.h"
+#include "scip/lpexact_bounding.h"
 #include "scip/mem.h"
 #include "scip/message_default.h"
 #include "scip/misc.h"
@@ -143,13 +142,57 @@
 #include "scip/struct_scip.h"
 #endif
 
+/** enables or disables exact solving mode
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ */
+SCIP_RETCODE SCIPenableExactSolving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable exact solving (TRUE) or disable it (FALSE) */
+   )
+{
+   assert(scip != NULL);
+
+#ifndef SCIP_WITH_EXACTSOLVE
+   if( enable )
+   {
+      SCIPerrorMessage("SCIP was compiled without exact solve support: cannot enable exact solving mode.\n");
+      return SCIP_ERROR;
+   }
+#else
+   /* skip if nothing has changed */
+   if( enable == scip->set->exact_enabled )
+      return SCIP_OKAY;
+
+   /* check stage and throw an error */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("Exact solving mode can only be enabled/disabled before reading/creating a problem.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* reoptimization in combination with exact solving has not been implemented */
+   if( scip->set->reopt_enable )
+   {
+      SCIPerrorMessage("Exact solving mode not (yet) compatible with reoptimization.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   scip->set->exact_enabled = enable;
+#endif
+
+   return SCIP_OKAY;
+}
+
 /** returns whether the solution process should be probably correct
  *
- *  @note This feature is not supported yet!
- *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
+ *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE
  */
-SCIP_Bool SCIPisExactSolve(
+SCIP_Bool SCIPisExact(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -159,7 +202,7 @@ SCIP_Bool SCIPisExactSolve(
    return (scip->set->exact_enabled);
 }
 
-/** returns whether aggreagtion is allowed to use negative slack */
+/** returns whether aggregation is allowed to use negative slack */
 SCIP_Bool SCIPallowNegSlack(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -167,7 +210,7 @@ SCIP_Bool SCIPallowNegSlack(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return (!SCIPisExactSolve(scip)) || (scip->set->exact_allownegslack);
+   return (!SCIPisExact(scip)) || (scip->set->exact_allownegslack);
 }
 
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
@@ -184,7 +227,7 @@ char SCIPdualBoundMethod(
    return (scip->set->exact_safedbmethod);
 }
 
-/** returns whether the certificate output is activated? */
+/** returns whether the certificate output is activated */
 SCIP_Bool SCIPisCertificateActive(
    SCIP*                 scip                /**< certificate information */
    )
@@ -192,7 +235,7 @@ SCIP_Bool SCIPisCertificateActive(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   return (scip->stat->certificate != NULL && scip->stat->certificate->transfile != NULL);
+   return SCIPcertificateIsEnabled(scip->stat->certificate);
 }
 
 /** returns certificate data structure
@@ -207,48 +250,6 @@ SCIP_CERTIFICATE* SCIPgetCertificate(
    assert(scip->stat != NULL);
 
    return scip->stat->certificate;
-}
-
-/** free information that is possibly still stored about this row in the certifacte structure */
-SCIP_RETCODE SCIPfreeRowCertInfo(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row                 /**< a SCIP row */
-   )
-{
-   SCIP_CERTIFICATE* certificate;
-   SCIP_AGGREGATIONINFO* aggrinfo;
-   SCIP_MIRINFO* mirinfo;
-
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
-      return SCIP_OKAY;
-
-   certificate = SCIPgetCertificate(scip);
-
-   /* only do something if row does not already exist*/
-   if( SCIPhashmapExists(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) )
-   {
-      SCIP_CALL( SCIPhashmapRemove(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) );
-      return SCIP_OKAY;
-   }
-
-   if( certificate->workingaggrinfo || certificate->workingmirinfo )
-      return SCIP_OKAY;
-
-   SCIPdebugMessage("Removing information stored in certificate for row \n");
-
-   if( (certificate->aggrinfohash != NULL) && SCIPhashmapExists(certificate->aggrinfohash, (void*) row) )
-   {
-      aggrinfo = (SCIP_AGGREGATIONINFO*) SCIPhashmapGetImage(certificate->aggrinfohash, (void*) row);
-      SCIP_CALL( SCIPcertificateFreeAggrInfo(scip->set, certificate, scip->lp, aggrinfo, row) );
-   }
-
-   if( (certificate->mirinfohash != NULL) && SCIPhashmapExists(certificate->mirinfohash, (void*) row) )
-   {
-      mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
-      SCIP_CALL( SCIPcertificateFreeMirInfo(scip->set, certificate, scip->lp, mirinfo, row) );
-   }
-
-   return SCIP_OKAY;
 }
 
 /** agg aggregation information to certificate for one row */
@@ -292,63 +293,11 @@ SCIP_RETCODE SCIPprintCertificateMirCut(
 {
    SCIP_CERTIFICATE* certificate;
 
-   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+   if( !SCIPisExact(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
    certificate = SCIPgetCertificate(scip);
    SCIP_CALL( SCIPcertificatePrintMirCut(scip->set, scip->lp, certificate, scip->transprob, row, 'L') );
-
-   return SCIP_OKAY;
-}
-
-/** compute a safe bound for the current lp solution */
-SCIP_RETCODE SCIPcomputeSafeBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             proveinfeas,        /**< should infeasibility be proven */
-   SCIP_Real*            safebound           /**< safe the resulting bound */
-   )
-{
-   SCIP_Bool lperror = false;
-
-   assert(scip != NULL);
-   assert(scip->stat != NULL);
-   assert(scip->lp != NULL && scip->lpexact != NULL);
-
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPcomputeSafeBound", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPlpExactComputeSafeBound(scip->lp, scip->lpexact, scip->set, scip->messagehdlr, SCIPblkmem(scip),
-         scip->stat, scip->eventqueue, scip->eventfilter, scip->transprob,
-         &lperror, proveinfeas, safebound, NULL, NULL) );
-
-   if( lperror )
-      return SCIP_ERROR;
-
-   return SCIP_OKAY;
-}
-
-/** force the next lp to be solved exactly */
-SCIP_RETCODE SCIPforceExactSolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->lpexact != NULL);
-
-   scip->lpexact->forceexactsolve = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** check exact integrality of lp solution */
-SCIP_RETCODE SCIPcheckIntegralityExact(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RESULT*          result              /**< result pointer */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->lp != NULL && scip->lpexact != NULL);
-
-   SCIP_CALL( SCIPlpExactcheckIntegralityExact(scip->lp, scip->lpexact, scip->set, result) );
 
    return SCIP_OKAY;
 }
@@ -364,16 +313,16 @@ SCIP_RETCODE SCIPcheckIntegralityExact(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-SCIP_RETCODE SCIPbranchLPexact(
+SCIP_RETCODE SCIPbranchLPExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchLPexact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPbranchLPExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPbranchExecLPexact(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound,
-         TRUE, result) );
+   SCIP_CALL( SCIPbranchExecLPExact(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+         scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
 }

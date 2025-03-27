@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -45,7 +45,7 @@
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_exactlp.h"
+#include "scip/cons_exactlinear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
@@ -70,7 +70,6 @@
 #include "scip/scip_var.h"
 #include <stdlib.h>
 #include <string.h>
-
 
 #define READER_NAME             "lpreader"
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
@@ -778,7 +777,7 @@ static
 SCIP_Bool isValueRational(
    SCIP*                 scip,               /**< SCIP data structure */
    LPINPUT*              lpinput,            /**< LP reading data */
-   SCIP_Rational*        value               /**< pointer to store the value (unchanged, if token is no value) */
+   SCIP_RATIONAL*        value               /**< pointer to store the value (unchanged, if token is no value) */
    )
 {
    assert(lpinput != NULL);
@@ -786,16 +785,16 @@ SCIP_Bool isValueRational(
 
    if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
    {
-      RatSetString(value, "inf");
+      SCIPrationalSetInfinity(value);
       return TRUE;
    }
    else
    {
       double val;
 
-      if( isValue(scip, lpinput, &val) || SCIPisRationalString(lpinput->token) )
+      if( isValue(scip, lpinput, &val) || SCIPrationalIsString(lpinput->token) )
       {
-         RatSetString(value, lpinput->token);
+         SCIPrationalSetString(value, lpinput->token);
          return TRUE;
       }
    }
@@ -862,7 +861,7 @@ SCIP_RETCODE getVariable(
       SCIPdebugMsg(scip, "creating new variable: <%s>\n", name);
       SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
             initial, removable, NULL, NULL, NULL, NULL, NULL) );
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPaddVarExactData(scip, newvar, NULL, NULL, NULL) );
       }
@@ -1335,9 +1334,9 @@ SCIP_RETCODE readCoefficientsRational(
                                               *   LP_MAX_LINELEN */
    int*                  coefssize,          /**< size of vars and coefs arrays */
    SCIP_VAR***           vars,               /**< pointer to store the array with variables (must be freed by caller) */
-   SCIP_Rational***      coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
+   SCIP_RATIONAL***      coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
    int*                  ncoefs,             /**< pointer to store the number of coefficients */
-   SCIP_Rational*        objoffset,          /**< pointer to store an objective offset (or NULL if ! isobjective) */
+   SCIP_RATIONAL*        objoffset,          /**< pointer to store an objective offset (or NULL if ! isobjective) */
    SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
    )
 {
@@ -1345,7 +1344,7 @@ SCIP_RETCODE readCoefficientsRational(
    SCIP_Bool havesign;
    SCIP_Bool havevalue;
    SCIP_Bool haveobjoffset = FALSE;
-   SCIP_Rational* coef;
+   SCIP_RATIONAL* coef;
    int coefsign;
    SCIP_Bool inquadpart;
    SCIP_VAR* firstquadvar;
@@ -1367,12 +1366,12 @@ SCIP_RETCODE readCoefficientsRational(
    *newsection = FALSE;
    inquadpart = FALSE;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &coef) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &coef) );
 
    if( isobjective )
    {
       assert(objoffset != NULL);
-      RatSetReal(objoffset, 0.0);
+      SCIPrationalSetReal(objoffset, 0.0);
    }
 
    /* read the first token, which may be the name of the line */
@@ -1416,12 +1415,12 @@ SCIP_RETCODE readCoefficientsRational(
    /* initialize buffers for storing the coefficients */
    *coefssize = LP_INIT_COEFSSIZE;
 
-   SCIP_CALL( RatCreateBlockArray(SCIPblkmem(scip), coefs, *coefssize) );
+   SCIP_CALL( SCIPrationalCreateBlockArray(SCIPblkmem(scip), coefs, *coefssize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, vars, *coefssize) );
 
    /* read the coefficients */
    coefsign = +1;
-   RatSetReal(coef, 1.0);
+   SCIPrationalSetReal(coef, 1.0);
    havesign = FALSE;
    havevalue = FALSE;
    firstquadvar = NULL;
@@ -1440,9 +1439,9 @@ SCIP_RETCODE readCoefficientsRational(
                syntaxError(scip, lpinput, "two objective offsets.");
                goto TERMINATE;
             }
-            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * RatApproxReal(coef));
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalGetReal(coef));
             haveobjoffset = TRUE;
-            RatMultReal(objoffset, coef, (double) coefsign);
+            SCIPrationalMultReal(objoffset, coef, (double) coefsign);
          }
       }
 
@@ -1457,7 +1456,7 @@ SCIP_RETCODE readCoefficientsRational(
       /* check if we read a value */
       if( isValueRational(scip, lpinput, coef) )
       {
-         SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", lpinput->linenumber, RatApproxReal(coef), coefsign);
+         SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", lpinput->linenumber, SCIPrationalGetReal(coef), coefsign);
          if( havevalue )
          {
             syntaxError(scip, lpinput, "two consecutive values.");
@@ -1490,7 +1489,7 @@ SCIP_RETCODE readCoefficientsRational(
          {
             SCIPwarningMessage(scip, "skipped single sign %c without value or variable in objective\n", coefsign == 1 ? '+' : '-');
          }
-         else if( isobjective && havevalue && !RatIsZero(coef) )
+         else if( isobjective && havevalue && !SCIPrationalIsZero(coef) )
          {
             assert( objoffset != NULL );
             /* check whether we found an objective offset */
@@ -1499,8 +1498,8 @@ SCIP_RETCODE readCoefficientsRational(
                syntaxError(scip, lpinput, "two objective offsets.");
                goto TERMINATE;
             }
-            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * RatApproxReal(coef));
-            RatMultReal(objoffset, coef, (double) coefsign);
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", lpinput->linenumber, coefsign * SCIPrationalGetReal(coef));
+            SCIPrationalMultReal(objoffset, coef, (double) coefsign);
          }
 
          *newsection = TRUE;
@@ -1554,8 +1553,8 @@ SCIP_RETCODE readCoefficientsRational(
       if( !inquadpart )
       {
          /* insert the linear coefficient */
-         SCIPdebugMsg(scip, "(line %d) read linear coefficient: %+g<%s>\n", lpinput->linenumber, coefsign * RatApproxReal(coef), SCIPvarGetName(var));
-         if( !RatIsZero(coef) )
+         SCIPdebugMsg(scip, "(line %d) read linear coefficient: %+g<%s>\n", lpinput->linenumber, coefsign * SCIPrationalGetReal(coef), SCIPvarGetName(var));
+         if( !SCIPrationalIsZero(coef) )
          {
             /* resize the vars and coefs array if needed */
             if( *ncoefs >= *coefssize )
@@ -1565,27 +1564,27 @@ SCIP_RETCODE readCoefficientsRational(
                *coefssize *= 2;
                *coefssize = MAX(*coefssize, (*ncoefs)+1);
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, vars, oldcoefssize, *coefssize) );
-               SCIP_CALL( RatReallocBlockArray(SCIPblkmem(scip), coefs, oldcoefssize, *coefssize) );
+               SCIP_CALL( SCIPrationalReallocBlockArray(SCIPblkmem(scip), coefs, oldcoefssize, *coefssize) );
             }
             assert(*ncoefs < *coefssize);
 
             /* add coefficient */
             (*vars)[*ncoefs] = var;
-            RatMultReal((*coefs)[*ncoefs], coef, (double) coefsign);
+            SCIPrationalMultReal((*coefs)[*ncoefs], coef, (double) coefsign);
             (*ncoefs)++;
          }
       }
 
       /* reset the flags and coefficient value for the next coefficient */
       coefsign = +1;
-      RatSetReal(coef, 1.0);
+      SCIPrationalSetReal(coef, 1.0);
       havesign = FALSE;
       havevalue = FALSE;
       firstquadvar = NULL;
    }
 
 TERMINATE:
-   RatFreeBuffer(SCIPbuffer(scip), &coef);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &coef);
 
    return SCIP_OKAY;
 }
@@ -1599,23 +1598,23 @@ SCIP_RETCODE readObjectiveRational(
 {
    char name[LP_MAX_LINELEN];
    SCIP_VAR** vars;
-   SCIP_Rational** coefs;
+   SCIP_RATIONAL** coefs;
    SCIP_Bool newsection;
-   SCIP_Rational* objoffset;
-   SCIP_Rational* tmpval;
+   SCIP_RATIONAL* objoffset;
+   SCIP_RATIONAL* tmpval;
    int ncoefs;
    int coefssize;
 
    assert(lpinput != NULL);
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objoffset) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpval) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objoffset) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmpval) );
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficientsRational(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
          objoffset, &newsection) );
 
-   if( !RatIsZero(objoffset) )
+   if( !SCIPrationalIsZero(objoffset) )
    {
       SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, objoffset) );
    }
@@ -1629,17 +1628,17 @@ SCIP_RETCODE readObjectiveRational(
       {
          assert(vars != NULL);  /* for lint */
          assert(coefs != NULL);
-         RatAdd(tmpval, SCIPvarGetObjExact(vars[i]), coefs[i]);
+         SCIPrationalAdd(tmpval, SCIPvarGetObjExact(vars[i]), coefs[i]);
          SCIP_CALL( SCIPchgVarObjExact(scip, vars[i], tmpval) );
       }
    }
 
    /* free memory */
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
-   RatFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
 
-   RatFreeBuffer(SCIPbuffer(scip), &tmpval);
-   RatFreeBuffer(SCIPbuffer(scip), &objoffset);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmpval);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &objoffset);
 
    return SCIP_OKAY; /*lint !e438*/
 }
@@ -1667,7 +1666,7 @@ SCIP_RETCODE readObjective(
 
    assert(lpinput != NULL);
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( readObjectiveRational(scip, lpinput) );
       return SCIP_OKAY;
@@ -1976,12 +1975,12 @@ SCIP_RETCODE readConstraintsRational(
    char name[LP_MAX_LINELEN];
    SCIP_CONS* cons;
    SCIP_VAR** vars;
-   SCIP_Rational** coefs;
+   SCIP_RATIONAL** coefs;
    LPSENSE sense;
    SCIP_RETCODE retcode;
-   SCIP_Rational* sidevalue;
-   SCIP_Rational* lhs;
-   SCIP_Rational* rhs;
+   SCIP_RATIONAL* sidevalue;
+   SCIP_RATIONAL* lhs;
+   SCIP_RATIONAL* rhs;
    SCIP_Bool newsection;
    SCIP_Bool initial;
    SCIP_Bool separate;
@@ -2001,9 +2000,9 @@ SCIP_RETCODE readConstraintsRational(
 
    retcode = SCIP_OKAY;
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhs) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhs) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &sidevalue) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &rhs) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &sidevalue) );
 
    /* read coefficients */
    SCIP_CALL( readCoefficientsRational(scip, lpinput, FALSE, name, &coefssize, &vars, &coefs, &ncoefs,
@@ -2051,22 +2050,22 @@ SCIP_RETCODE readConstraintsRational(
       syntaxError(scip, lpinput, "expected value as right hand side.");
       goto TERMINATE;
    }
-   RatMultReal(sidevalue, sidevalue, (double) sidesign);
+   SCIPrationalMultReal(sidevalue, sidevalue, (double) sidesign);
 
    /* assign the left and right hand side, depending on the constraint sense */
    switch( sense ) /*lint !e530*/
    {
    case LP_SENSE_GE:
-      RatSet(lhs, sidevalue);
-      RatSetString(rhs, "inf");
+      SCIPrationalSetRational(lhs, sidevalue);
+      SCIPrationalSetInfinity(rhs);
       break;
    case LP_SENSE_LE:
-      RatSetString(lhs, "-inf");
-      RatSet(rhs, sidevalue);
+      SCIPrationalSetNegInfinity(lhs);
+      SCIPrationalSetRational(rhs, sidevalue);
       break;
    case LP_SENSE_EQ:
-      RatSet(lhs, sidevalue);
-      RatSet(rhs, sidevalue);
+      SCIPrationalSetRational(lhs, sidevalue);
+      SCIPrationalSetRational(rhs, sidevalue);
       break;
    case LP_SENSE_NOTHING:
    default:
@@ -2170,7 +2169,7 @@ SCIP_RETCODE readConstraintsRational(
          goto TERMINATE;
       }
       assert(coefs != NULL);
-      if( !RatIsEqualReal(coefs[0], 1.0) )
+      if( !SCIPrationalIsEqualReal(coefs[0], 1.0) )
       {
          syntaxError(scip, lpinput, "There cannot be a coefficient before the binary indicator variable.");
          goto TERMINATE;
@@ -2181,17 +2180,17 @@ SCIP_RETCODE readConstraintsRational(
          goto TERMINATE;
       }
       assert(vars != NULL);
-      retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], RatApproxReal(lhs));
+      retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], SCIPrationalGetReal(lhs));
    }
 
  TERMINATE:
    /* free memory */
-   RatFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
+   SCIPrationalFreeBlockArray(SCIPblkmem(scip), &coefs, coefssize);
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
 
-   RatFreeBuffer(SCIPbuffer(scip), &sidevalue);
-   RatFreeBuffer(SCIPbuffer(scip), &rhs);
-   RatFreeBuffer(SCIPbuffer(scip), &lhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &sidevalue);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &rhs);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lhs);
 
    SCIP_CALL( retcode );
 
@@ -2248,7 +2247,7 @@ SCIP_RETCODE readConstraints(
 
    retcode = SCIP_OKAY;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( readConstraintsRational(scip, lpinput) );
       return SCIP_OKAY;
@@ -2461,15 +2460,15 @@ SCIP_RETCODE readBoundsRational(
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
-   SCIP_Rational* value;
-   SCIP_Rational* lb;
-   SCIP_Rational* ub;
+   SCIP_RATIONAL* value;
+   SCIP_RATIONAL* lb;
+   SCIP_RATIONAL* ub;
 
    assert(lpinput != NULL);
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &value) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lb) );
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &ub) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &value) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &lb) );
+   SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &ub) );
 
    while( getNextToken(scip, lpinput) )
    {
@@ -2484,8 +2483,8 @@ SCIP_RETCODE readBoundsRational(
          goto TERMINATE;
 
       /* default bounds are [0,+inf] */
-      RatSetReal(lb, 0.0);
-      RatSetString(ub, "inf");
+      SCIPrationalSetReal(lb, 0.0);
+      SCIPrationalSetInfinity(ub);
       leftsense = LP_SENSE_NOTHING;
 
       /* check if the first token is a sign */
@@ -2511,14 +2510,14 @@ SCIP_RETCODE readBoundsRational(
          switch( leftsense )
          {
          case LP_SENSE_GE:
-            RatMultReal(ub, value, (double) sign);
+            SCIPrationalMultReal(ub, value, (double) sign);
             break;
          case LP_SENSE_LE:
-            RatMultReal(lb, value, (double) sign);
+            SCIPrationalMultReal(lb, value, (double) sign);
             break;
          case LP_SENSE_EQ:
-            RatMultReal(lb, value, (double) sign);
-            RatMultReal(ub, value, (double) sign);
+            SCIPrationalMultReal(lb, value, (double) sign);
+            SCIPrationalMultReal(ub, value, (double) sign);
             break;
          case LP_SENSE_NOTHING:
          default:
@@ -2580,14 +2579,14 @@ SCIP_RETCODE readBoundsRational(
                switch( rightsense )
                {
                case LP_SENSE_GE:
-                  RatMultReal(lb, value, (double) sign);
+                  SCIPrationalMultReal(lb, value, (double) sign);
                   break;
                case LP_SENSE_LE:
-                  RatMultReal(ub, value, (double) sign);
+                  SCIPrationalMultReal(ub, value, (double) sign);
                   break;
                case LP_SENSE_EQ:
-                  RatMultReal(lb, value, (double) sign);
-                  RatMultReal(ub, value, (double) sign);
+                  SCIPrationalMultReal(lb, value, (double) sign);
+                  SCIPrationalMultReal(ub, value, (double) sign);
                   break;
                case LP_SENSE_NOTHING:
                default:
@@ -2608,8 +2607,8 @@ SCIP_RETCODE readBoundsRational(
                syntaxError(scip, lpinput, "variable with bound is marked as 'free'.");
                goto TERMINATE;
             }
-            RatSetString(lb, "-inf");
-            RatSetString(ub, "inf");
+            SCIPrationalSetNegInfinity(lb);
+            SCIPrationalSetInfinity(ub);
          }
          else
          {
@@ -2619,19 +2618,19 @@ SCIP_RETCODE readBoundsRational(
       }
 
       /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
-      if( !RatIsZero(lb) )
+      if( !SCIPrationalIsZero(lb) )
          SCIP_CALL( SCIPchgVarLbExact(scip, var, lb) );
       /*lint --e{777}*/
-      if( !RatIsInfinity(ub) )
+      if( !SCIPrationalIsInfinity(ub) )
          SCIP_CALL( SCIPchgVarUbExact(scip, var, ub) );
       SCIPdebugMsg(scip, "(line %d) new bounds: <%s>[%g,%g]\n", lpinput->linenumber, SCIPvarGetName(var),
          SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
 TERMINATE:
-   RatFreeBuffer(SCIPbuffer(scip), &ub);
-   RatFreeBuffer(SCIPbuffer(scip), &lb);
-   RatFreeBuffer(SCIPbuffer(scip), &value);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &ub);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &lb);
+   SCIPrationalFreeBuffer(SCIPbuffer(scip), &value);
 
    return SCIP_OKAY;
 }
@@ -2646,7 +2645,7 @@ SCIP_RETCODE readBounds(
 {
    assert(lpinput != NULL);
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
    {
       SCIP_CALL( readBoundsRational(scip, lpinput) );
       return SCIP_OKAY;
@@ -2901,25 +2900,25 @@ SCIP_RETCODE readBinaries(
       if( SCIPvarGetLbGlobal(var) < 0.0 )
       {
          SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
-            SCIP_Rational* tmp;
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
-            RatSetReal(tmp, 0.0);
+            SCIP_RATIONAL* tmp;
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+            SCIPrationalSetReal(tmp, 0.0);
             SCIP_CALL( SCIPchgVarLbExact(scip, var, tmp) );
-            RatFreeBuffer(SCIPbuffer(scip), &tmp);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
          }
       }
       if( SCIPvarGetUbGlobal(var) > 1.0 )
       {
          SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
-            SCIP_Rational* tmp;
-            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
-            RatSetReal(tmp, 1.0);
+            SCIP_RATIONAL* tmp;
+            SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &tmp) );
+            SCIPrationalSetReal(tmp, 1.0);
             SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
-            RatFreeBuffer(SCIPbuffer(scip), &tmp);
+            SCIPrationalFreeBuffer(SCIPbuffer(scip), &tmp);
          }
       }
       SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
@@ -3477,9 +3476,9 @@ SCIP_RETCODE printRowExact(
    const char*           rownameextension,   /**< row name extension */
    const char*           type,               /**< row type ("=", "<=", or ">=") */
    SCIP_VAR**            linvars,            /**< array of linear variables */
-   SCIP_Rational**       linvals,            /**< array of linear coefficient values */
+   SCIP_RATIONAL**       linvals,            /**< array of linear coefficient values */
    int                   nlinvars,           /**< number of linear variables */
-   SCIP_Rational*        rhs                 /**< right hand side */
+   SCIP_RATIONAL*        rhs                 /**< right hand side */
    )
 {
    int v;
@@ -3523,8 +3522,8 @@ SCIP_RETCODE printRowExact(
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) RatToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
-      if( !RatIsNegative(linvals[v]) )
+      (void) SCIPrationalToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
+      if( !SCIPrationalIsNegative(linvals[v]) )
          (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "+%s %s", ratbuffer, varname);
       else
          (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "%s %s", ratbuffer, varname);
@@ -3532,7 +3531,7 @@ SCIP_RETCODE printRowExact(
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
-   (void) RatToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
+   (void) SCIPrationalToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
    (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", type, ratbuffer);
 
    /* we start a new line; therefore we tab this line */
@@ -4305,6 +4304,9 @@ SCIP_RETCODE SCIPincludeReaderLp(
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
+   /* reader is safe to use in exact solving mode */
+   SCIPreaderMarkExact(reader);
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyLp) );
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeLp) );
@@ -4467,8 +4469,9 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_Real ub;
 
    SCIP_Bool zeroobj;
-
-   assert(scip != NULL);
+   int implintlevel;
+   int nintegers = nvars - ncontvars;
+   assert(nintegers >= 0);
 
    /* find indicator constraint handler */
    conshdlrInd = SCIPfindConshdlr(scip, "indicator");
@@ -4531,6 +4534,11 @@ SCIP_RETCODE SCIPwriteLp(
    checkVarnames(scip, vars, nvars);
    /* check if the constraint names are to long */
    checkConsnames(scip, conss, nconss, transformed);
+
+   /* adjust written integrality constraints on implied integral variables based on the implied integral level */
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "\\ SCIP STATISTICS\n");
@@ -4851,9 +4859,9 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPinfoMessage(scip, file, ";\n");
          }
       }
-      else if(strcmp(conshdlrname, "linear-exact") == 0 )
+      else if(strcmp(conshdlrname, "exactlinear") == 0 )
       {
-         if( RatIsEqual(SCIPgetRhsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) )
+         if( SCIPrationalIsEqual(SCIPgetRhsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) )
          {
             SCIP_CALL( printRowExact(scip, file, consname, "_", "=",
                SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
@@ -4861,13 +4869,13 @@ SCIP_RETCODE SCIPwriteLp(
          }
          else
          {
-            if( !RatIsNegInfinity(SCIPgetLhsExactLinear(scip, cons)) )
+            if( !SCIPrationalIsNegInfinity(SCIPgetLhsExactLinear(scip, cons)) )
             {
                SCIP_CALL( printRowExact(scip, file, consname, "_lhs", ">=",
                   SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
                   SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) );
             }
-            if( !RatIsInfinity(SCIPgetRhsExactLinear(scip, cons)) )
+            if( !SCIPrationalIsInfinity(SCIPgetRhsExactLinear(scip, cons)) )
             {
                SCIP_CALL( printRowExact(scip, file, consname,  "_rhs", "<=",
                   SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
@@ -5009,74 +5017,118 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* print binaries section */
-   if( nbinvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "Binaries\n");
-
-      clearLine(linebuffer, &linecnt);
+      SCIP_Bool initial = TRUE;
 
       /* output active variables */
-      for( v = 0; v < nvars; ++v )
+      for( v = 0; v < nintegers; ++v )
       {
          var = vars[v];
-         assert( var != NULL );
 
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+            continue;
+
+         if( initial )
          {
-            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIPinfoMessage(scip, file, "Binaries\n");
+            initial = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       /* possibly output aggregated variables */
       for( v = 0; v < naggvars; ++v )
       {
          var = aggvars[v];
-         assert( var != NULL );
 
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+            continue;
+
+         if( initial )
          {
-            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIPinfoMessage(scip, file, "Binaries\n");
+            initial = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       endLine(scip, file, linebuffer, &linecnt);
    }
 
    /* print generals section */
-   if( nintvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "Generals\n");
+      SCIP_Bool initial = TRUE;
 
       /* output active variables */
-      for( v = 0; v < nvars; ++v )
+      for( v = nbinvars; v < nintegers; ++v )
       {
          var = vars[v];
-         assert( var != NULL );
 
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         switch( SCIPvarGetType(var) )
          {
-            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            case SCIP_VARTYPE_BINARY:
+               continue;
+            case SCIP_VARTYPE_INTEGER:
+               if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+                  continue;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
+                  continue;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+         } /*lint !e788*/
+
+         if( initial )
+         {
+            SCIPinfoMessage(scip, file, "Generals\n");
+            initial = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       /* possibly output aggregated variables */
       for( v = 0; v < naggvars; ++v )
       {
          var = aggvars[v];
-         assert( var != NULL );
 
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+         switch( SCIPvarGetType(var) )
          {
-            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            case SCIP_VARTYPE_BINARY:
+               continue;
+            case SCIP_VARTYPE_INTEGER:
+               if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+                  continue;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
+                  continue;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+         } /*lint !e788*/
+
+         if( initial )
+         {
+            SCIPinfoMessage(scip, file, "Generals\n");
+            initial = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       endLine(scip, file, linebuffer, &linecnt);

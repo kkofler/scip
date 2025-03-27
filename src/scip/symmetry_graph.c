@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,6 +35,7 @@
 #include "scip/misc.h"
 #include "symmetry/struct_symmetry.h"
 #include "symmetry/type_symmetry.h"
+
 
 
 /** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges
@@ -438,6 +439,7 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
  *  Edges are colored according to the variable coefficients.
  *  For signed permutation symmetries, also edges connecting the root node and the negated variable
  *  nodes are added, these edges are colored by the negative coefficients.
+ *  If the variable is fixed, a node representing the constant value is added.
  */
 SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -488,7 +490,7 @@ SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    }
 
    /* possibly add node for constant */
-   if( ! SCIPisZero(scip, constant) )
+   if( nvars == 0 || !SCIPisZero(scip, constant) )
    {
       SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, constant, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootidx, nodeidx, FALSE, 0.0) );
@@ -836,9 +838,11 @@ int compareVars(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   if( type1 < type2 )
       return -1;
-   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+   if( type1 > type2 )
       return 1;
 
    /* use SCIP's comparison functions if available */
@@ -972,9 +976,11 @@ int compareVarsSignedPerm(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   if( type1 < type2 )
       return -1;
-   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+   if( type1 > type2 )
       return 1;
 
    obj1 = isneg1 ? -SCIPvarGetObj(var1) : SCIPvarGetObj(var1);
@@ -1315,12 +1321,11 @@ SCIP_Bool isFixedVar(
 {
    assert(var != NULL);
 
-   if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+   if( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var) )
       return TRUE;
-   if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) )
       return TRUE;
-   if ( (fixedtype & SYM_SPEC_REAL) &&
-      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
+   if( (fixedtype & SYM_SPEC_REAL) && ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var) ) )
       return TRUE;
    return FALSE;
 }

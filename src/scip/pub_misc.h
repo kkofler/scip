@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -867,7 +867,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPhashmapInsertLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
-   long                  image               /**< new image for origin */
+   SCIP_Longint          image               /**< new image for origin */
    );
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
@@ -900,7 +900,7 @@ int SCIPhashmapGetImageInt(
    void*                 origin              /**< origin to retrieve image for */
    );
 
-/** retrieves image of given origin from the hash map, or LONG_MAX if no image exists */
+/** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
 SCIP_EXPORT
 long SCIPhashmapGetImageLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
@@ -1879,6 +1879,12 @@ SCIP_Bool SCIPrealToRational(
    SCIP_Longint*         denominator         /**< pointer to store the denominator d of the rational number */
    );
 
+/** checks, if value is integral without any tolerances */
+SCIP_EXPORT
+SCIP_Bool SCIPrealIsExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
+   );
+
 /** tries to find a value, such that all given values, if scaled with this value become integral in relative allowed
  *  difference in between mindelta and maxdelta
  */
@@ -1898,10 +1904,10 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcalcIntegralScalarExact(
    BMS_BUFMEM*           buffer,
-   SCIP_Rational**       vals,               /**< values to scale */
+   SCIP_RATIONAL**       vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */
    SCIP_Real             maxscale,           /**< maximal allowed scalar */
-   SCIP_Rational*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_RATIONAL*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    );
 
@@ -2015,7 +2021,6 @@ int SCIPgetRandomInt(
    int                   maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
    );
-
 
 /** returns a random integer between minrandval and maxrandval */
 SCIP_EXPORT

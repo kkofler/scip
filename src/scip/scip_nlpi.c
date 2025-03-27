@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -104,7 +104,12 @@ SCIP_DECL_EXPR_MAPEXPR(mapvar2varidx)
    return SCIP_OKAY;
 }
 
-/** creates an NLPI and includes it into SCIP */
+/** creates an NLPI and includes it into SCIP
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
 SCIP_RETCODE SCIPincludeNlpi(
    SCIP*                           scip,                        /**< SCIP data structure */
    const char*                     name,                        /**< name of NLP interface */

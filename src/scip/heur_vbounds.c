@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -399,7 +399,7 @@ SCIP_RETCODE dfs(
       /* the current node was completely handled, remove it from the stack */
       stacksize--;
 
-      if( (maxstacksize > 1) && SCIPvarGetType(startvar) != SCIP_VARTYPE_CONTINUOUS )
+      if( maxstacksize > 1 && SCIPvarIsIntegral(startvar) )
       {
          /* store node in the sorted nodes array */
          dfsnodes[(*ndfsnodes)] = curridx;
@@ -585,7 +585,7 @@ SCIP_RETCODE applyVboundsFixings(
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetObj(var));*/
 
       /* only check integer or binary variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( !SCIPvarIsIntegral(var) )
          continue;
 
       /* skip variables which are already fixed */
@@ -985,7 +985,7 @@ SCIP_RETCODE applyVbounds(
       /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
        * if we are not in exact solving mode
        */
-      if( cutoff && !SCIPisExactSolve(scip) )
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          goto TERMINATE;
@@ -1375,6 +1375,9 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecVbounds, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyVbounds) );

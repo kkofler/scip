@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -124,7 +124,7 @@ SCIP_RETCODE applyBoundChanges(
       if( tightened )
       {
          ++(*ntightened);
-         if( SCIPvarGetType(data->bndvar[i]) <= SCIP_VARTYPE_INTEGER )
+         if( SCIPvarIsNonimpliedIntegral(data->bndvar[i]) )
             ++(*ntightenedint);
       }
       if( infeas )

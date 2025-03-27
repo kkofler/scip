@@ -44,10 +44,6 @@
 #include "scip/type_var.h"
 #include "scip/type_misc.h"
 
-#ifdef NDEBUG
-#include "scip/struct_lpexact.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -62,28 +58,39 @@ SCIP_VAR* SCIPcolExactGetVar(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
-
 /** returns the left hand side of the row */
 SCIP_EXPORT
-SCIP_Rational* SCIProwExactGetLhs(
+SCIP_RATIONAL* SCIProwExactGetLhs(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** returns the right hand side of the row */
 SCIP_EXPORT
-SCIP_Rational* SCIProwExactGetRhs(
+SCIP_RATIONAL* SCIProwExactGetRhs(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** returns the constant of the row */
 SCIP_EXPORT
-SCIP_Rational* SCIProwExactGetConstant(
+SCIP_RATIONAL* SCIProwExactGetConstant(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   );
+
+/** gets the length of a row */
+SCIP_EXPORT
+int SCIProwExactGetNNonz(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
 /** gets array with coefficients of nonzero entries */
 SCIP_EXPORT
-SCIP_Rational** SCIProwExactGetVals(
+SCIP_RATIONAL** SCIProwExactGetVals(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   );
+
+/** returns TRUE iff row is member of current LP */
+SCIP_EXPORT
+SCIP_Bool SCIProwExactIsInLP(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
@@ -113,12 +120,6 @@ void SCIProwExactUnlock(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
-/** returns exact row corresponding to fprow, if it exists. Otherwise returns NULL */
-SCIP_EXPORT
-SCIP_ROWEXACT* SCIProwGetRowExact(
-   SCIP_ROW*             row                 /**< SCIP row */
-   );
-
 /** returns fp row corresponding to exact row, if it exists. Otherwise returns NULL */
 SCIP_EXPORT
 SCIP_ROW* SCIProwExactGetRow(
@@ -135,6 +136,12 @@ SCIP_ROW* SCIProwExactGetRowRhs(
 SCIP_EXPORT
 SCIP_Bool SCIProwExactHasFpRelax(
    SCIP_ROWEXACT*        row                 /**< SCIP row */
+   );
+
+/** returns whether the exact LP is in diving mode */
+SCIP_EXPORT
+SCIP_Bool SCIPlpExactDiving(
+   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
    );
 
 #ifdef __cplusplus

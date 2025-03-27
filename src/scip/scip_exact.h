@@ -45,39 +45,34 @@
 #include "scip/type_certificate.h"
 #include "scip/type_lpexact.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
+/** enable exact solving mode
  *
- *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
  */
 SCIP_EXPORT
-SCIP_Bool SCIPisExactSolve(
+SCIP_RETCODE SCIPenableExactSolving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable exact solving (TRUE) or disable it (FALSE) */
+   );
+
+/** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
+ *
+ *  @return Returns TRUE if \SCIP is in exact solving mode, otherwise FALSE
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisExact(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether aggreagtion is allowed to use negative slack */
+/** returns whether aggregation is allowed to use negative slack */
 SCIP_EXPORT
 SCIP_Bool SCIPallowNegSlack(
    SCIP*                 scip                /**< SCIP data structure */
@@ -92,14 +87,7 @@ char SCIPdualBoundMethod(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** enforce integrality of the current exact rational lp solution */ 
-SCIP_EXPORT
-SCIP_RETCODE SCIPcheckIntegralityExact(
-   SCIP*                 scip,
-   SCIP_RESULT*          result
-   );
-
-/** returns whether the certificate output is activated? */
+/** returns whether the certificate output is activated */
 SCIP_EXPORT
 SCIP_Bool SCIPisCertificateActive(
    SCIP*                 scip                /**< certificate information */
@@ -107,7 +95,7 @@ SCIP_Bool SCIPisCertificateActive(
 
 /** returns whether the certificate output is activated? */
 SCIP_EXPORT
-void SCIPcertificateExit(
+SCIP_RETCODE SCIPcertificateExit(
    SCIP*                 scip                /**< certificate information */
    );
 
@@ -147,12 +135,6 @@ SCIP_RETCODE SCIPprintCertificateMirCut(
    SCIP_ROW*             row                 /**< row that needs to be certified */
    );
 
-/** free information that is possibly still stored about this row in the certifacte structure */
-SCIP_RETCODE SCIPfreeRowCertInfo(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row                 /**< a SCIP row */
-   );
-
 /** stores the active aggregation information in the certificate data structures for a row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
@@ -179,20 +161,6 @@ SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** computes a safe bound that is valid in exact rational arithmetic */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeSafeBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             proveinfeas,        /**< should infeasibility be proven instead */
-   SCIP_Real*            safebound           /**< store the safe bound */
-   );
-
-/** forces the next lp to be solved by a rational lp solver */
-SCIP_EXPORT
-SCIP_RETCODE SCIPforceExactSolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** branches on an LP solution exactly; does not call branching rules, since fractionalities are assumed to small;
  *  if no fractional variables exist, the result is SCIP_DIDNOTRUN;
  *
@@ -205,7 +173,7 @@ SCIP_RETCODE SCIPforceExactSolve(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPbranchLPexact(
+SCIP_RETCODE SCIPbranchLPExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );

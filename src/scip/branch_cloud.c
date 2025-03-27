@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -303,7 +303,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
       }
-      else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisIntegral(scip, solval) )
+      /* for non-implied integral variables with zero cost and fractional value we only allow the next integral values */
+      else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(vars[i])
+         && !SCIPisIntegral(scip, solval) )
       {
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPfloor(scip, solval)) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPceil(scip, solval)) );
@@ -651,7 +653,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
        * for cutting off sub problems and improving lower bounds of children
        */
-      exactsolve = SCIPisExactSolve(scip);
+      exactsolve = SCIPisExact(scip);
 
       /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
       allcolsinlp = SCIPallColsInLP(scip);

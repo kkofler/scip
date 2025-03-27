@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -229,7 +229,7 @@ SCIP_RETCODE updateActivities(
    assert(maxactivities != NULL);
    assert(nviolrows != NULL);
    assert(0 <= *nviolrows && *nviolrows <= nlprows);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+   assert(SCIPvarIsNonimpliedIntegral(var));
 
    delta = newsolval - oldsolval;
    col = SCIPvarGetCol(var);
@@ -356,7 +356,7 @@ SCIP_RETCODE selectShifting(
       solval = SCIPgetSolVal(scip, sol, var);
 
       /* only accept integer variables */
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER )
+      if( !SCIPvarIsNonimpliedIntegral(var) )
          continue;
 
       isfrac = !SCIPisFeasIntegral(scip, solval);
@@ -474,7 +474,7 @@ SCIP_RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarIsNonimpliedIntegral(var));
 
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
@@ -825,7 +825,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
             SCIP_VAR* var;
 
             var = SCIPcolGetVar(cols[c]);
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+            if( SCIPvarIsNonimpliedIntegral(var) )
             {
                SCIP_Real act;
 
@@ -984,7 +984,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          break;
       }
 
-      assert(SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarIsNonimpliedIntegral(shiftvar));
 
       SCIPdebugMsg(scip, "intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
@@ -1123,7 +1123,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          SCIP_CALL( SCIPlinkLPSol(scip, sol) );
 
          /* in exact mode we have to end diving prior to trying the solution */
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
             SCIP_CALL( SCIPendDive(scip) );
@@ -1180,6 +1180,9 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIntshifting, NULL) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIntshifting) );

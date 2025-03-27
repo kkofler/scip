@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -895,7 +895,7 @@ SCIP_RETCODE applyFixings(
    assert(nchgcoefs != NULL);
 
    SCIPdebugMsg(scip, "before fixings: ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
    v = 0;
    while( v < consdata->nvars )
@@ -957,7 +957,7 @@ SCIP_RETCODE applyFixings(
    assert(consdata->sorted);
 
    SCIPdebugMsg(scip, "after sort    : ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
    /* delete pairs of equal or negated variables; scan from back to front because deletion doesn't affect the
     * order of the front variables
@@ -992,16 +992,15 @@ SCIP_RETCODE applyFixings(
             SCIP_CONS* newcons;
             SCIP_Real lb;
             SCIP_Real ub;
-            SCIP_VARTYPE vartype;
             char varname[SCIP_MAXSTRLEN];
             char consname[SCIP_MAXSTRLEN];
 
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
             lb = MAX(SCIPvarGetLbGlobal(consdata->intvar) - SCIPvarGetUbGlobal(newvars[2]), 0); /*lint !e666*/
             ub = MAX(SCIPvarGetUbGlobal(consdata->intvar) - SCIPvarGetLbGlobal(newvars[2]), 0); /*lint !e666*/
-            vartype = SCIPvarGetType(consdata->intvar);
 
-            SCIP_CALL( SCIPcreateVar(scip, &newvars[0], varname, lb, ub, 0.0, vartype,
+            SCIP_CALL( SCIPcreateVarImpl(scip, &newvars[0], varname, lb, ub, 0.0,
+                  SCIPvarGetType(consdata->intvar), SCIPvarGetImplType(consdata->intvar),
                   SCIPvarIsInitial(consdata->intvar), SCIPvarIsRemovable(consdata->intvar),
                   NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, newvars[0]) );
@@ -1047,7 +1046,6 @@ SCIP_RETCODE applyFixings(
             SCIP_VAR* newvar;
             SCIP_Real lb;
             SCIP_Real ub;
-            SCIP_VARTYPE vartype;
             char varname[SCIP_MAXSTRLEN];
             SCIP_Bool aggregated;
             SCIP_Bool infeasible;
@@ -1057,9 +1055,9 @@ SCIP_RETCODE applyFixings(
             /* avoid infeasible cutoffs and guarantee non-negative bounds for the new artificial integer variable */
             lb = MAX(SCIPvarGetLbGlobal(consdata->intvar) - 1, 0); /*lint !e666*/
             ub = MAX(SCIPvarGetUbGlobal(consdata->intvar) - 1, 0); /*lint !e666*/
-            vartype = (lb == 0 && ub == 1) ? SCIP_VARTYPE_BINARY : SCIPvarGetType(consdata->intvar);
 
-            SCIP_CALL( SCIPcreateVar(scip, &newvar, varname, lb, ub, 0.0, vartype,
+            SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, varname, lb, ub, 0.0,
+                  SCIPvarGetType(consdata->intvar), SCIPvarGetImplType(consdata->intvar),
                   SCIPvarIsInitial(consdata->intvar), SCIPvarIsRemovable(consdata->intvar),
                   NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, newvar) );
@@ -1132,7 +1130,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMsg(scip, "after fixings : ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
    return SCIP_OKAY;
 }
@@ -1214,11 +1212,15 @@ SCIP_RETCODE addExtendedFlowFormulation(
       if ( i == 0 )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
-         SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVarImpl(scip, &varnn, name, 0.0, 1.0, 0.0,
+               SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+               NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, varnn) );
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
-         SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVarImpl(scip, &varns, name, 0.0, 1.0, 0.0,
+               SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+               NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, varns) );
 
          /* need to lock variables, because we aggregate them */
@@ -1240,11 +1242,15 @@ SCIP_RETCODE addExtendedFlowFormulation(
             {
                /* if the rhs is 1 (true) the flow goes to the bottom level */
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
-               SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVarImpl(scip, &varns, name, 0.0, 1.0, 0.0,
+                     SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+                     NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, varns) );
 
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ss", SCIPconsGetName(cons), i);
-               SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVarImpl(scip, &varss, name, 0.0, 1.0, 0.0,
+                     SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+                     NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, varss) );
 
                /* need to lock variables, because we aggregate them */
@@ -1262,11 +1268,15 @@ SCIP_RETCODE addExtendedFlowFormulation(
             {
                /* if the rhs is 0 (false) the flow stays on the top level */
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
-               SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVarImpl(scip, &varnn, name, 0.0, 1.0, 0.0,
+                     SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+                     NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, varnn) );
 
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_sn", SCIPconsGetName(cons), i);
-               SCIP_CALL( SCIPcreateVar(scip, &varsn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+               SCIP_CALL( SCIPcreateVarImpl(scip, &varsn, name, 0.0, 1.0, 0.0,
+                     SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+                     NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, varsn) );
 
                /* need to lock variables, because we aggregate them */
@@ -1285,19 +1295,27 @@ SCIP_RETCODE addExtendedFlowFormulation(
          {
             /* add the four flow variables */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_nn", SCIPconsGetName(cons), i);
-            SCIP_CALL( SCIPcreateVar(scip, &varnn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVarImpl(scip, &varnn, name, 0.0, 1.0, 0.0,
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+                  NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varnn) );
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ns", SCIPconsGetName(cons), i);
-            SCIP_CALL( SCIPcreateVar(scip, &varns, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVarImpl(scip, &varns, name, 0.0, 1.0, 0.0,
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+                  NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varns) );
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_sn", SCIPconsGetName(cons), i);
-            SCIP_CALL( SCIPcreateVar(scip, &varsn, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVarImpl(scip, &varsn, name, 0.0, 1.0, 0.0,
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+                  NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varsn) );
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d_ss", SCIPconsGetName(cons), i);
-            SCIP_CALL( SCIPcreateVar(scip, &varss, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVarImpl(scip, &varss, name, 0.0, 1.0, 0.0,
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+                  NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, varss) );
 
             SCIP_CALL( SCIPlockVarCons(scip, varnn, cons, TRUE, TRUE) );
@@ -1529,7 +1547,9 @@ SCIP_RETCODE addExtendedAsymmetricFormulation(
 
       /* create variable */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "p_%s_%d", SCIPconsGetName(cons), i);
-      SCIP_CALL( SCIPcreateVar(scip, &artvar, name, lb, ub, 0.0, SCIP_VARTYPE_IMPLINT, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &artvar, name, lb, ub, 0.0,
+            SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons),
+            NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, artvar) );
       SCIP_CALL( SCIPlockVarCons(scip, artvar, cons, TRUE, TRUE) );
 
@@ -4787,13 +4807,13 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
    )
 {
+   SCIP_CONSDATA* consdata;
    SCIP_VAR** xorvars;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   SCIP_Real constant = 0.0;
-   SCIP_Real lrhs;
+   SCIP_Real constant;
+   int consnodeidx;
    int nlocvars;
-   int nvars;
    int i;
 
    assert(scip != NULL);
@@ -4801,35 +4821,50 @@ SCIP_RETCODE addSymmetryInformation(
    assert(graph != NULL);
    assert(success != NULL);
 
-   /* get active variables of the constraint */
-   nvars = SCIPgetNVars(scip);
-   nlocvars = SCIPgetNVarsXor(scip, cons);
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+   /* create arrays to store active representation of variables */
+   nlocvars = MAX(consdata->nvars, 1);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlocvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlocvars) );
 
-   xorvars = SCIPgetVarsXor(scip, cons);
-   for( i = 0; i < nlocvars; ++i )
+   /* add constraint node */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &consnodeidx) );
+
+   /* add intvar to symmetry detection graph */
+   if( consdata->intvar != NULL)
    {
+      int xornodeidx;
+
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_XORINT, &xornodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, xornodeidx, FALSE, 0.0) );
+
+      vars[0] = consdata->intvar;
+      vals[0] = 1.0;
+      constant = 0.0;
+      nlocvars = 1;
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, xornodeidx, vars, vals, nlocvars, constant) );
+   }
+
+   /* add node modeling the XOR-part and connect it with constraint node */
+   xorvars = consdata->vars;
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      assert(xorvars[i] != NULL);
       vars[i] = xorvars[i];
       vals[i] = 1.0;
    }
-
-   if( SCIPgetIntVarXor(scip, cons) != NULL )
-   {
-      vars[nlocvars] = SCIPgetIntVarXor(scip, cons);
-      vals[nlocvars++] = 2.0;
-   }
-   assert(nlocvars <= nvars);
-
+   constant = -(SCIP_Real)SCIPgetRhsXor(scip, cons);
+   nlocvars = consdata->nvars;
    SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
-   lrhs = (SCIP_Real) SCIPgetRhsXor(scip, cons) - constant;
-
-   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
-         cons, lrhs, lrhs, success) );
+   SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, consnodeidx, vars, vals, nlocvars, constant) );
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

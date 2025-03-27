@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 #include "scip/type_var.h"
 #include "scip/type_cons.h"
 #include "scip/type_matrix.h"
+#include "scip/type_rational.h"
 
 #ifdef NDEBUG
 #include "scip/struct_matrix.h"
@@ -128,7 +129,7 @@ SCIP_Real* SCIPmatrixGetRowValPtr(
 
 /** get row based start pointer of values */
 SCIP_EXPORT
-SCIP_Rational** SCIPmatrixGetRowValPtrExact(
+SCIP_RATIONAL** SCIPmatrixGetRowValPtrExact(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );
@@ -176,14 +177,14 @@ SCIP_Real SCIPmatrixGetRowRhs(
 
 /** get left-hand-side of row */
 SCIP_EXPORT
-SCIP_Rational* SCIPmatrixGetRowLhsExact(
+SCIP_RATIONAL* SCIPmatrixGetRowLhsExact(
    SCIP_MATRIX*          matrix,             /**< matrix instace */
    int                   row                 /**< row index */
    );
 
 /** get right-hand-side of row */
 SCIP_EXPORT
-SCIP_Rational* SCIPmatrixGetRowRhsExact(
+SCIP_RATIONAL* SCIPmatrixGetRowRhsExact(
    SCIP_MATRIX*          matrix,             /**< matrix instance */
    int                   row                 /**< row index */
    );

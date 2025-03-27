@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -3232,7 +3232,7 @@ SCIP_RETCODE SCIPhashmapInsertInt(
 SCIP_RETCODE SCIPhashmapInsertLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
-   long                  image               /**< new image for origin */
+   SCIP_Longint          image               /**< new image for origin */
    )
 {
    uint32_t hashval;
@@ -3255,7 +3255,7 @@ SCIP_RETCODE SCIPhashmapInsertLong(
    hashval = hashvalue((size_t)origin);
 
    /* append origin->image pair to hash map */
-   img.long_val = image;
+   img.longint = image;
    SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
 
    return SCIP_OKAY;
@@ -3337,7 +3337,7 @@ int SCIPhashmapGetImageInt(
    return INT_MAX;
 }
 
-/** retrieves image of given origin from the hash map, or LONG_MAX if no image exists */
+/** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
 long SCIPhashmapGetImageLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin              /**< origin to retrieve image for */
@@ -3352,9 +3352,9 @@ long SCIPhashmapGetImageLong(
    assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
 
    if( hashmapLookup(hashmap, origin, &pos) )
-      return hashmap->slots[pos].image.long_val;
+      return hashmap->slots[pos].image.longint;
 
-   return LONG_MAX;
+   return SCIP_LONGINT_MAX;
 }
 
 /** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */
@@ -4856,8 +4856,8 @@ SCIP_RETCODE SCIPboolarrayCopy(
    SCIP_CALL( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, \
-                     sourceboolarray->valssize) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals,
+            sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
    (*boolarray)->firstidx = sourceboolarray->firstidx;
@@ -9600,6 +9600,14 @@ SCIP_Bool SCIPrealToRational(
    return TRUE;
 }
 
+/** checks, if value is integral without any tolerances */
+SCIP_Bool SCIPrealIsExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   return floor(val) == val; /*lint !e777*/
+}
+
 /** checks, whether the given scalar scales the given value to an integral number with error in the given bounds */
 static
 SCIP_Bool isIntegralScalar(
@@ -9833,10 +9841,10 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 /** tries to find a value, such that all given values, if scaled with this value become integral */
 SCIP_RETCODE SCIPcalcIntegralScalarExact(
    BMS_BUFMEM*           buffer,
-   SCIP_Rational**       vals,               /**< values to scale */
+   SCIP_RATIONAL**       vals,               /**< values to scale */
    int                   nvals,              /**< number of values to scale */
    SCIP_Real             maxscale,           /**< maximal allowed scalar */
-   SCIP_Rational*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_RATIONAL*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    )
 {
@@ -9845,8 +9853,8 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
    SCIP_Longint numerator;
    SCIP_Longint denominator;
    SCIP_Longint updatemultiplier;
-   SCIP_Rational* ratupdate;
-   SCIP_Rational* ratscm;
+   SCIP_RATIONAL* ratupdate;
+   SCIP_RATIONAL* ratscm;
    SCIP_Bool scalable;
    int c;
 
@@ -9858,27 +9866,26 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
 
    *success = FALSE;
 
-   /** @todo exip: extension
-    *  - we could also compute scm and gcd via mpz_scm() and mpz_gcd(), respectively. check which version is faster
-    *  - if we stay with the SCIP_Longint conversion, we could use the other way to check the correctness of our result
+   /** @todo test whether it is faster to compute scm and gcd via mpz_scm() and mpz_gcd() in
+    *        SCIPcalcIntegralScalarExact(); even if we stay with the SCIP_Longint conversion, we could use the other way
+    *        to check the correctness of our result
     */
-
    /* calculate the greatest common divisor of the numerators and the smallest common multiple of the denominators */
    gcd = 1;
    scm = 1;
    scalable = TRUE;
 
-   SCIP_CALL( RatCreateBuffer(buffer, &ratupdate) );
-   SCIP_CALL( RatCreateBuffer(buffer, &ratscm) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratupdate) );
+   SCIP_CALL( SCIPrationalCreateBuffer(buffer, &ratscm) );
 
    /* first value (to initialize gcd) */
    for( c = 0; c < nvals && scalable; ++c )
    {
-      if( RatIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+      if( SCIPrationalIsZero(vals[c]) ) /* zeros are allowed in the vals array */
          continue;
 
       /* get numerator and check whether it fits into SCIP_Longint */
-      numerator = RatNumerator(vals[c]);
+      numerator = SCIPrationalNumerator(vals[c]);
       if( numerator == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
@@ -9886,7 +9893,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       }
 
       /* get numerator and check whether it fits into SCIP_Longint */
-      denominator = RatDenominator(vals[c]);
+      denominator = SCIPrationalDenominator(vals[c]);
       if( denominator == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
@@ -9905,11 +9912,11 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
    /* remaining values */
    for( ++c; c < nvals && scalable; ++c )
    {
-      if( RatIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+      if( SCIPrationalIsZero(vals[c]) ) /* zeros are allowed in the vals array */
          continue;
 
       /* get numerator and check whether it fits into SCIP_Longint */
-      numerator = RatNumerator(vals[c]);
+      numerator = SCIPrationalNumerator(vals[c]);
       if( numerator == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
@@ -9917,7 +9924,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       }
 
       /* get denom and check whether it fits into SCIP_Longint */
-      denominator = RatDenominator(vals[c]);
+      denominator = SCIPrationalDenominator(vals[c]);
       if( denominator == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
@@ -9930,12 +9937,12 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
 
       /* update scm via newscm = scm * denominator / gcd(scm, denominator) and check whether it fits into SCIP_Longint */
       updatemultiplier = denominator / SCIPcalcGreComDiv(scm, denominator);
-      RatSetInt(ratupdate, updatemultiplier, 1L);
-      RatSetInt(ratscm, scm, 1L);
-      RatMult(ratscm, ratscm, ratupdate);
-      RatCanonicalize(ratscm);
+      SCIPrationalSetInt(ratupdate, updatemultiplier, 1L);
+      SCIPrationalSetInt(ratscm, scm, 1L);
+      SCIPrationalMult(ratscm, ratscm, ratupdate);
+      SCIPrationalCanonicalize(ratscm);
 
-      scm= RatNumerator(ratscm);
+      scm = SCIPrationalNumerator(ratscm);
 
       if( scm == SCIP_LONGINT_MAX )
       {
@@ -9951,15 +9958,15 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       /* make values integral by multiplying them with the smallest common multiple of the denominators */
       assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
 
-      RatSetInt(intscalar, scm, gcd);
-      RatCanonicalize(intscalar);
+      SCIPrationalSetInt(intscalar, scm, gcd);
+      SCIPrationalCanonicalize(intscalar);
 
       *success = TRUE;
 
    }
 
-   RatFreeBuffer(buffer, &ratscm);
-   RatFreeBuffer(buffer, &ratupdate);
+   SCIPrationalFreeBuffer(buffer, &ratscm);
+   SCIPrationalFreeBuffer(buffer, &ratupdate);
 
    return SCIP_OKAY;
 }
@@ -10312,8 +10319,6 @@ void SCIPrandomFree(
    return;
 }
 
-
-
 /** returns a random integer between minrandval and maxrandval */
 int SCIPrandomGetInt(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
@@ -10570,14 +10575,6 @@ SCIP_Real SCIPnegateReal(
    )
 {
    return -x;
-}
-
-/** checks, if value is integral without any tolerances */
-SCIP_Bool SCIPisExactlyIntegral(
-   SCIP_Real             val                 /**< value to process */
-   )
-{
-   return floor(val) == val; /*lint !e777*/
 }
 
 /*

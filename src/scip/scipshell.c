@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -131,7 +131,7 @@ SCIP_RETCODE fromCommandLine(
 
          SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
          SCIP_CALL( SCIPretransformSol(scip, origsol) );
-         if( SCIPisExactSolve(scip) && SCIPisExactSol(scip, bestsol) )
+         if( SCIPisExact(scip) && SCIPisExactSol(scip, bestsol) )
          {
             SCIP_CALL( SCIPprintSolExact(scip, origsol, NULL, FALSE) );
          }
@@ -296,8 +296,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
    SCIP_Bool onlyversion;
    SCIP_Real primalreference = SCIP_UNKNOWN;
    SCIP_Real dualreference = SCIP_UNKNOWN;
-   SCIP_Rational* primalreferencerational = NULL;
-   SCIP_Rational* dualreferencerational = NULL;
+   SCIP_RATIONAL* primalreferencerational = NULL;
+   SCIP_RATIONAL* dualreferencerational = NULL;
    const char* dualrefstring;
    const char* primalrefstring;
    int i;
@@ -525,7 +525,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          if( primalrefstring != NULL && dualrefstring != NULL )
          {
             char *endptr;
-            if( !SCIPisExactSolve(scip) )
+            if( !SCIPisExact(scip) )
             {
                if( ! SCIPparseReal(scip, primalrefstring, &primalreference, &endptr) ||
                         ! SCIPparseReal(scip, dualrefstring, &dualreference, &endptr) )
@@ -540,8 +540,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
             {
                SCIP_Bool error;
 
-               SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &primalreferencerational) );
-               SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &dualreferencerational) );
+               SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &primalreferencerational) );
+               SCIP_CALL( SCIPrationalCreateBlock(SCIPblkmem(scip), &dualreferencerational) );
 
                error = !SCIPparseRational(scip, primalrefstring, primalreferencerational, &endptr) ||
                        !SCIPparseRational(scip, primalrefstring, dualreferencerational, &endptr);
@@ -559,15 +559,15 @@ SCIP_RETCODE SCIPprocessShellArguments(
          /* validate the solve */
          if( validatesolve )
          {
-            if( !SCIPisExactSolve(scip) )
+            if( !SCIPisExact(scip) )
             {
                SCIP_CALL( SCIPvalidateSolve(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
             }
             else
             {
                SCIP_CALL( SCIPvalidateSolveExact(scip, primalreferencerational, dualreferencerational, FALSE, NULL, NULL, NULL) );
-               RatFreeBlock(SCIPblkmem(scip), &dualreferencerational);
-               RatFreeBlock(SCIPblkmem(scip), &primalreferencerational);
+               SCIPrationalFreeBlock(SCIPblkmem(scip), &dualreferencerational);
+               SCIPrationalFreeBlock(SCIPblkmem(scip), &primalreferencerational);
             }
          }
       }

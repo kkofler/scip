@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -28,7 +28,7 @@
  * @author Tobias Buchwald
  *
  * This heuristic tries to find solutions by taking the LP or NLP, rounding solution values, fixing the variables to the
- * rounded values and then changing some of the values.To determine which variable is changed we give each variable a
+ * rounded values and then changing some of the values. To determine which variable is changed we give each variable a
  * ranking dependent on its dualvalue.  We work with a transformed problem that is always feasible and has objective = 0
  * iff the original problem is also feasible. Thus we cannot expect to find really good solutions.
  */
@@ -57,6 +57,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_event.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -392,7 +393,7 @@ SCIP_RETCODE addLinearConstraints(
 
          for( j = 0; j < nvars; ++j )
          {
-            if( SCIPvarGetType(vars[j]) >= SCIP_VARTYPE_CONTINUOUS )
+            if( !SCIPvarIsIntegral(vars[j]) )
             {
                iscombinatorial = FALSE;
                break;
@@ -453,7 +454,7 @@ SCIP_RETCODE addVarboundConstraints(
       vars[0] = SCIPgetVarVarbound(scip, conss[i]);
       vars[1] = SCIPgetVbdvarVarbound(scip, conss[i]);
 
-      iscombinatorial = SCIPvarGetType(vars[0]) < SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[1]) < SCIP_VARTYPE_CONTINUOUS;
+      iscombinatorial = SCIPvarIsIntegral(vars[0]) && SCIPvarIsIntegral(vars[1]);
 
       /* skip constraint, if not of interest */
       if( (iscombinatorial && !addcombconss) || (!iscombinatorial && !addcontconss) )
@@ -906,7 +907,7 @@ SCIP_RETCODE createSubSCIP(
    heurdata->solfound = FALSE;
    heurdata->nonimprovingRounds = 0;
 
-   /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present*/
+   /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present */
    conshdlrindi = SCIPfindConshdlr(scip, "indicator");
    conshdlrlin = SCIPfindConshdlr(scip, "linear");
    conshdlrnonlin = SCIPfindConshdlr(scip, "nonlinear");
@@ -919,7 +920,7 @@ SCIP_RETCODE createSubSCIP(
    conss = SCIPgetOrigConss(scip);
 
    /* for each constraint ask if it has an allowed type */
-   for (i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss; i++ )
    {
       cons = conss[i];
       currentconshdlr = SCIPconsGetHdlr(cons);
@@ -961,7 +962,7 @@ SCIP_RETCODE createSubSCIP(
    /* create sub-SCIP copy of CIP, copy interesting plugins */
    success = TRUE;
    SCIP_CALL( SCIPcopyPlugins(scip, heurdata->subscip, TRUE, FALSE, TRUE, FALSE, TRUE,
-         FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, &success) );
+         FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, &success) );
 
    if( success == FALSE )
    {
@@ -970,6 +971,11 @@ SCIP_RETCODE createSubSCIP(
 
    /* copy parameter settings */
    SCIP_CALL( SCIPcopyParamSettings(scip, heurdata->subscip) );
+
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPenableExactSolving(heurdata->subscip, FALSE) );
 
    /* disable bound limits */
    SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/primal", SCIP_INVALID) );
@@ -2400,24 +2406,30 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       }
       else
       {
+         /* ignore fixed vars in input */
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
+         {
+            SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
+            continue;
+         }
+
          if( ranks[i] > 0 )
          {
             if( SCIPvarIsBinary(v) && SCIPisEQ(scip, 1.0, SCIPgetSolVal(scip, transsol, v)) )
+            {
+               SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
                continue;
-
-            /* ignore fixed vars in input */
-            if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
-               continue;
+            }
 
             *newval = SCIPgetSolVal(scip, transsol, v) + 1;
          }
          else
          {
             if( SCIPvarIsBinary(v) && SCIPisEQ(scip, 0.0, SCIPgetSolVal(scip, transsol, v)) )
+            {
+               SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
                continue;
-
-            if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
-               continue;
+            }
 
             *newval = SCIPgetSolVal(scip, transsol, v) - 1;
          }
@@ -2816,14 +2828,14 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    BMSclearMemory(heurdata);
 
    /* include primal heuristic */
-
-   /* use SCIPincludeHeurBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecDualval, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDualval) );

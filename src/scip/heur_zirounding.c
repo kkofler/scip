@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -359,7 +359,7 @@ void rowFindSlackVar(
 
       colvar = SCIPcolGetVar(rowcols[v]);
 
-      if( SCIPvarGetType(colvar) == SCIP_VARTYPE_CONTINUOUS
+      if( !SCIPvarIsIntegral(colvar)
          && !SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(colvar), SCIPvarGetUbGlobal(colvar))
          && SCIPcolGetNLPNonz(rowcols[v]) == 1 )
       {
@@ -677,7 +677,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             SCIP_Real ubgap;
             SCIP_Real lbgap;
 
-            assert(SCIPvarGetType(slackvars[i]) == SCIP_VARTYPE_CONTINUOUS);
+            assert(!SCIPvarIsIntegral(slackvars[i]));
             solvalslackvar = SCIPgetSolVal(scip, sol, slackvars[i]);
             ubslackvar = SCIPvarGetUbGlobal(slackvars[i]);
             lbslackvar = SCIPvarGetLbGlobal(slackvars[i]);
@@ -781,7 +781,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          down = oldsolval - lowerbound;
 
          /* if the variable is integer or implicit binary, do not shift further than the nearest integer */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY)
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          {
             SCIP_Real ceilx;
             SCIP_Real floorx;
@@ -856,7 +856,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    if( currentlpcands == 0 )
    {
       SCIP_Bool stored;
-      SCIP_CALL(SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored));
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored) );
       if( stored )
       {
 #ifdef SCIP_DEBUG
@@ -904,6 +904,9 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecZirounding, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyZirounding) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2749,10 +2749,10 @@ SCIP_RETCODE separateMcCormickImplicit(
 
          /* create an empty row */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "mccormick_%sestimate_implicit_%s*%s_%" SCIP_LONGINT_FORMAT,
-                             underestimate ? "under" : "over", SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y),
-                             SCIPgetNLPs(scip));
+            underestimate ? "under" : "over", SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y),
+            SCIPgetNLPs(scip));
 
-         SCIP_CALL(SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE,
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE,
                FALSE, FALSE) );
 
          xcoef = 0.0;

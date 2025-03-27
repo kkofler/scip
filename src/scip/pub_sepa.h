@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -101,9 +101,9 @@ void SCIPsepaSetFreq(
    int                   freq                /**< new frequency of separator */
    );
 
-/** marks the separator as exact (i.e. safe to use in exact solving mode) */
+/** marks the separator as safe to use in exact solving mode */
 SCIP_EXPORT
-void SCIPsepaSetExact(
+void SCIPsepaMarkExact(
    SCIP_SEPA*            sepa                /**< separator */
    );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -36,8 +36,8 @@
 #define __SCIP_PUB_MISC_SELECT_H__
 
 #include "scip/def.h"
-#include "type_misc.h"
-#include "intervalarith.h"
+#include "scip/type_misc.h"
+#include "scip/intervalarith.h"
 
 #ifdef __cplusplus
 extern "C" {

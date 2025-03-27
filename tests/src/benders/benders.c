@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -31,6 +31,7 @@
 
 #include "scip/benders.h"
 #include "scip/pub_benders.h"
+#include "scip/cons_linear.h"
 #include "scip/scip.h"
 
 
@@ -271,6 +272,9 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
+
+   /* including cons_linear */
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
 
    /* including the test Benders' decomposition */
    SCIP_CALL( SCIPincludeBendersTest(scip) );

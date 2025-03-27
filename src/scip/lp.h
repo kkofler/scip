@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1127,19 +1127,6 @@ SCIP_Real SCIPlpGetPseudoObjval(
 
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
 SCIP_Real SCIPlpGetModifiedPseudoObjval(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             oldbound,           /**< old value for bound */
-   SCIP_Real             newbound,           /**< new value for bound */
-   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   );
-
-/** gets pseudo objective value, if a bound of the given variable would be modified in the given way;
- *  perform calculations with interval arithmetic to get an exact lower bound
- */
-SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */

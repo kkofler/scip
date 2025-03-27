@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -109,7 +109,7 @@ struct SCIP_Sol
  */
 struct SCIP_ValsExact
 {
-   SCIP_Rational*        obj;                /**< objective value of solution */
+   SCIP_RATIONAL*        obj;                /**< objective value of solution */
    SCIP_RATIONALARRAY*   vals;               /**< solution values for variables */
    SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */

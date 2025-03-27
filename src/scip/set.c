@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -68,6 +68,7 @@
 #include "scip/benders.h"
 #include "scip/expr.h"
 #include "scip/nlpi.h"
+#include "scip/iisfinder.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
@@ -197,6 +198,15 @@
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
 #define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
 #define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
+
+/* IIS */
+#define SCIP_DEFAULT_IISFINDER_MINIMAL       TRUE  /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
+#define SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS  FALSE /**< should bounds of the problem be considered for removal */
+#define SCIP_DEFAULT_IISFINDER_SILENT        FALSE /**< should the IIS finders be run silently and output suppressed */
+#define SCIP_DEFAULT_IISFINDER_STOPAFTERONE  TRUE  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */
+#define SCIP_DEFAULT_IISFINDER_REMOVEUNUSEDVARS TRUE /**< should vars that do not feature in any constraints be removed at the end of the IIS process */
+#define SCIP_DEFAULT_IISFINDER_TIMELIM       1e+20 /**< maximal time in seconds for all IIS finders to run */
+#define SCIP_DEFAULT_IISFINDER_NODELIM       -1L   /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
 
 /* Limits */
 
@@ -509,6 +519,7 @@
 
 /* exact SCIP parameters */
 #define SCIP_DEFAULT_EXACT_ENABLED        FALSE /**< should the problem be solved exactly (without numerical tolerances)? */
+#define SCIP_DEFAULT_EXACT_IMPROVINGSOLS   TRUE /**< should only exact solutions be checked which improve the primal bound? */
 #define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
 #define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 1 /**< frequency at which safe dual bounding method is interleaved with exact LP
@@ -516,13 +527,16 @@
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
 #define SCIP_DEFAULT_EXACT_LPINFO         FALSE /**< should the exact LP solver display status messages? */
+#define SCIP_DEFAULT_EXACT_ALLOWNEGSLACK   TRUE /**< should the exact LP solver display status messages? */
+#define SCIP_DEFAULT_EXACT_WEAKENCUTS     FALSE /**< should cuts be weakenend in exact mode? */
 #define SCIP_DEFAULT_CUTMAXDENOMSIZE     131072L /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^17)
                                                  *   but numerically better cuts (0: disabled) */
 #define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000L /**< maximal absolute bound value for wich cut coefficient should
                                                  *   be approximated with bounded denominator (0: no restriction) */
 
-/* certificate output */
-#define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate output file, or "-" if no output should be created */
+/* certificate settings */
+static const char SCIP_DEFAULT_CERTIFICATE_FILENAME[2] = {'-', '\0'}; /**< name of the certificate file, or "-" if no output should be created */
+#define SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE SCIP_MEM_NOLIMIT /**< maximum size of the certificate file in MB (stop printing when reached) */
 
 /* Reading */
 
@@ -539,6 +553,11 @@
 
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 #define SCIP_DEFAULT_PRINTZEROS           FALSE /**< should variables set to zero be printed? */
+#define SCIP_DEFAULT_WRITE_IMPLINTLEVEL      0  /**< should integrality constraints (i.c.) be written for implied integral
+                                                 *   variables? (0: use original i.c., 1: add i.c. to strongly implied integral
+                                                 *   vars, 2: add i.c. to all implied integral vars, -1: remove i.c. from
+                                                 *   strongly implied integral vars, -2: remove i.c. from all implied integral
+                                                 *   vars)" */
 
 
 
@@ -654,7 +673,7 @@ SCIP_DECL_PARAMCHGD(paramChgdInfinity)
    SCIP_Real infinity;
 
    infinity = SCIPparamGetReal(param);
-   RatSetInfinity(infinity);
+   SCIPrationalChgInfinity(infinity);
 
    /* Check that infinity value of LP-solver is at least as large as the one used in SCIP. This is necessary, because we
     * transfer SCIP infinity values to the ones by the LPI, but not the converse. */
@@ -731,7 +750,7 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    if( retcode == SCIP_INVALIDCALL )
       return SCIP_PARAMETERWRONGVAL;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** information method for a parameter change of usesymmetry */
@@ -753,21 +772,25 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_WITH_EXACTSOLVE
 /** information method for a parameter change of exact solving mode */
 static
 SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
    assert( scip != NULL );
    assert( param != NULL );
 
-   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
-   {
-      SCIPerrorMessage("Exact solving mode can only be enabled/disabled before reading/creating a problem.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
+   retcode = SCIPenableExactSolving(scip, SCIPparamGetBool(param));
 
-   return SCIP_OKAY;
+   /* an appropriate error message is already printed in the above method */
+   if( retcode == SCIP_INVALIDCALL )
+      return SCIP_PARAMETERWRONGVAL;
+
+   return retcode;
 }
+#endif
 
 /** set parameters for reoptimization */
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
@@ -876,6 +899,9 @@ void SCIPsetEnableOrDisablePluginClocks(
 
    for( i = set->nbranchrules - 1; i >= 0; --i )
       SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
+
+   for ( i = set->niisfinders - 1; i >= 0; --i )
+      SCIPiisfinderEnableOrDisableClocks(set->iisfinders[i], enabled);
 }
 
 /* method to be invoked when the parameter timing/statistictiming is changed */
@@ -907,6 +933,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -1018,6 +1045,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->nbranchrules; ++p )
       {
          SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
+      }
+   }
+
+   /* copy all iis finder plugins */
+   if( copyiisfinders && sourceset->iisfinders != NULL )
+   {
+      for( p = 0; p < sourceset->niisfinders; ++p )
+      {
+         SCIP_CALL( SCIPiisfinderCopyInclude(sourceset->iisfinders[p], targetset) );
       }
    }
 
@@ -1238,6 +1274,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
    (*set)->branchrulesnamesorted = FALSE;
+   (*set)->iisfinders = NULL;
+   (*set)->niisfinders = 0;
+   (*set)->iisfinderssize = 0;
+   (*set)->iisfinderssorted = FALSE;
    (*set)->banditvtables = NULL;
    (*set)->banditvtablessize = 0;
    (*set)->nbanditvtables = 0;
@@ -1656,6 +1696,43 @@ SCIP_RETCODE SCIPsetCreate(
          "should variable histories be transferred to initialize SCIP copies?",
          &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
          NULL, NULL) );
+
+   /* IIS parameter */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/minimal",
+         "should the resultant infeasible set be irreducible, i.e., an IIS not an IS",
+         &(*set)->iisfinder_minimal, FALSE, SCIP_DEFAULT_IISFINDER_MINIMAL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/removebounds",
+         "should bounds of the problem be considered for removal",
+         &(*set)->iisfinder_removebounds, FALSE, SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/silent",
+         "should the IIS finders be run silently and output suppressed",
+         &(*set)->iisfinder_silent, FALSE, SCIP_DEFAULT_IISFINDER_SILENT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/stopafterone",
+         "should the IIS search stop after a single IIS finder is run (excluding post processing)",
+         &(*set)->iisfinder_stopafterone, TRUE, SCIP_DEFAULT_IISFINDER_STOPAFTERONE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/removeunusedvars",
+         "should vars that do not feature in any constraints be removed at the end of the IIS process",
+         &(*set)->iisfinder_removeunusedvars, TRUE, SCIP_DEFAULT_IISFINDER_REMOVEUNUSEDVARS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "iis/time",
+         "maximal time in seconds for all IIS finders to run",
+         &(*set)->iisfinder_time, FALSE, SCIP_DEFAULT_IISFINDER_TIMELIM, 0.0, SCIP_DEFAULT_IISFINDER_TIMELIM,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "iis/nodes",
+         "maximal number of nodes to process for all IIS finders (-1: no limit)",
+         &(*set)->iisfinder_nodes, FALSE, SCIP_DEFAULT_IISFINDER_NODELIM, -1LL, SCIP_LONGINT_MAX,
+         SCIPparamChgdLimit, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2735,12 +2812,18 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->visual_objextern, FALSE, SCIP_DEFAULT_VISUAL_OBJEXTERN,
          NULL, NULL) );
 
+#ifdef SCIP_WITH_EXACTSOLVE
    /* exact SCIP parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/enabled",
          "should the problem be solved exactly (without numerical tolerances)?",
          &(*set)->exact_enabled, FALSE, SCIP_DEFAULT_EXACT_ENABLED,
          paramChgdExactSolve, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/improvingsols",
+         "should only exact solutions be checked which improve the primal bound?",
+         &(*set)->exact_improvingsols, TRUE, SCIP_DEFAULT_EXACT_IMPROVINGSOLS,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "exact/safedbmethod",
          "method for computing safe dual bounds ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic)",
@@ -2762,12 +2845,12 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/allownegslack",
          "should the exact LP solver display status messages?",
-         &(*set)->exact_allownegslack, FALSE, TRUE,
+         &(*set)->exact_allownegslack, FALSE, SCIP_DEFAULT_EXACT_ALLOWNEGSLACK,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/weakencuts",
          "should cuts be weakenend in exact mode?",
-         &(*set)->exact_weakencuts, FALSE, FALSE,
+         &(*set)->exact_weakencuts, FALSE, SCIP_DEFAULT_EXACT_WEAKENCUTS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "exact/cutmaxdenomsize",
@@ -2778,12 +2861,35 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal absolute bound value for wich cut coefficient should be approximated with bounded denominator (0: no restriction)",
          &(*set)->exact_cutapproxmaxboundval, FALSE, SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   /* CERTIFICATE tool parameters */
+   /* certificate settings */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
          "certificate/filename",
-         "name of the CERTIFICATE Tool output file, or - if no CERTIFICATE Tool output should be created",
+         "name of the certificate file, or \"-\" if no output should be created",
          &(*set)->certificate_filename, FALSE, SCIP_DEFAULT_CERTIFICATE_FILENAME,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "certificate/maxfilesize",
+         "maximum size of the certificate file in MB (stop printing when reached)",
+         &(*set)->certificate_maxfilesize, FALSE, (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
+         NULL, NULL) );
+#else
+   /* if SCIP is built without support for exact solving, we initialize the values of the exact parameters, but do not
+    * display the parameters to the SCIP user
+    */
+   (*set)->exact_enabled = SCIP_DEFAULT_EXACT_ENABLED;
+   assert((*set)->exact_enabled == FALSE);
+   (*set)->exact_improvingsols = SCIP_DEFAULT_EXACT_IMPROVINGSOLS;
+   (*set)->exact_safedbmethod = SCIP_DEFAULT_EXACT_SAFEDBMETHOD;
+   (*set)->exact_psdualcolselection = SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION;
+   (*set)->exact_interleavestrategy = SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY;
+   (*set)->exact_lpinfo = SCIP_DEFAULT_EXACT_LPINFO;
+   (*set)->exact_allownegslack = SCIP_DEFAULT_EXACT_ALLOWNEGSLACK;
+   (*set)->exact_weakencuts = SCIP_DEFAULT_EXACT_WEAKENCUTS;
+   (*set)->exact_cutmaxdenomsize = SCIP_DEFAULT_CUTMAXDENOMSIZE;
+   (*set)->exact_cutapproxmaxboundval = SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL;
+   (*set)->certificate_filename = (char*)SCIP_DEFAULT_CERTIFICATE_FILENAME;
+   (*set)->certificate_maxfilesize = (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE;
+#endif
 
    /* Reading parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -2822,6 +2928,13 @@ SCIP_RETCODE SCIPsetCreate(
          "write/genericnamesoffset",
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "write/implintlevel",
+         "should integrality constraints (i.c.) be written for implied integral variables? (0: use original i.c., "
+         "1: add i.c. to strongly implied integral vars, 2: add i.c. to all implied integral vars, "
+         "-1: remove i.c. from strongly implied integral vars, -2: remove i.c. from all implied integral vars)",
+         &(*set)->write_implintlevel, FALSE, SCIP_DEFAULT_WRITE_IMPLINTLEVEL, -2, 2,
          NULL, NULL) );
 
    return SCIP_OKAY;
@@ -2951,6 +3064,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
+
+   /* free IIS */
+   for( i = 0; i < (*set)->niisfinders; ++i)
+   {
+      SCIP_CALL( SCIPiisfinderFree(&(*set)->iisfinders[i], *set, blkmem) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->iisfinders);
 
    /* free statistics tables */
    for( i = 0; i < (*set)->ntables; ++i )
@@ -5005,6 +5125,63 @@ void SCIPsetSortBranchrulesName(
    }
 }
 
+/** inserts IIS finders in IIS finders list */
+SCIP_RETCODE SCIPsetIncludeIISfinder(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   )
+{
+   assert(set != NULL);
+   assert(iisfinder != NULL);
+
+   if( set->niisfinders >= set->iisfinderssize )
+   {
+      set->iisfinderssize = SCIPsetCalcMemGrowSize(set, set->niisfinders + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->iisfinders, set->iisfinderssize) );
+   }
+   assert(set->niisfinders < set->iisfinderssize);
+
+   set->iisfinders[set->niisfinders] = iisfinder;
+   set->niisfinders++;
+   set->iisfinderssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the IIS finders of the given name, or NULL if not existing */
+SCIP_IISFINDER* SCIPsetFindIISfinder(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of IIS finder */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->niisfinders; ++i )
+   {
+      if( strcmp(SCIPiisfinderGetName(set->iisfinders[i]), name) == 0 )
+         return set->iisfinders[i];
+   }
+
+   return NULL;
+}
+
+/** sorts IIS finders by priorities */
+void SCIPsetSortIISfinders(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->iisfinderssorted )
+   {
+      SCIPsortPtr((void**)set->iisfinders, SCIPiisfinderComp, set->niisfinders);
+      set->iisfinderssorted = TRUE;
+   }
+}
+
 /** inserts display column in display column list */
 SCIP_RETCODE SCIPsetIncludeDisp(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -6299,6 +6476,8 @@ SCIP_Bool SCIPsetIsEQ(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6317,6 +6496,8 @@ SCIP_Bool SCIPsetIsLT(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6335,6 +6516,8 @@ SCIP_Bool SCIPsetIsLE(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6353,6 +6536,8 @@ SCIP_Bool SCIPsetIsGT(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6371,6 +6556,8 @@ SCIP_Bool SCIPsetIsGE(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6421,6 +6608,7 @@ SCIP_Bool SCIPsetIsIntegral(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSISINT(val, set->num_epsilon);
 }
@@ -6435,6 +6623,8 @@ SCIP_Bool SCIPsetIsScalingIntegral(
    SCIP_Real scaledeps;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val));
+   assert(SCIPisFinite(scalar));
 
    scaledeps = REALABS(scalar);
    scaledeps = MAX(scaledeps, 1.0);
@@ -6452,6 +6642,7 @@ SCIP_Bool SCIPsetIsFracIntegral(
    assert(set != NULL);
    assert(SCIPsetIsGE(set, val, -set->num_epsilon));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_epsilon));
+   assert(SCIPisFinite(val));
 
    return (val <= set->num_epsilon);
 }
@@ -6463,6 +6654,7 @@ SCIP_Real SCIPsetFloor(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFLOOR(val, set->num_epsilon);
 }
@@ -6474,6 +6666,7 @@ SCIP_Real SCIPsetCeil(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSCEIL(val, set->num_epsilon);
 }
@@ -6485,6 +6678,7 @@ SCIP_Real SCIPsetRound(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSROUND(val, set->num_epsilon);
 }
@@ -6496,6 +6690,7 @@ SCIP_Real SCIPsetFrac(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFRAC(val, set->num_epsilon);
 }
@@ -6508,6 +6703,8 @@ SCIP_Bool SCIPsetIsSumEQ(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6526,6 +6723,8 @@ SCIP_Bool SCIPsetIsSumLT(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6544,6 +6743,8 @@ SCIP_Bool SCIPsetIsSumLE(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6562,6 +6763,8 @@ SCIP_Bool SCIPsetIsSumGT(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6580,6 +6783,8 @@ SCIP_Bool SCIPsetIsSumGE(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6630,6 +6835,7 @@ SCIP_Real SCIPsetSumFloor(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFLOOR(val, set->num_sumepsilon);
 }
@@ -6641,6 +6847,7 @@ SCIP_Real SCIPsetSumCeil(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSCEIL(val, set->num_sumepsilon);
 }
@@ -6652,6 +6859,7 @@ SCIP_Real SCIPsetSumRound(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSROUND(val, set->num_sumepsilon);
 }
@@ -6663,6 +6871,7 @@ SCIP_Real SCIPsetSumFrac(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFRAC(val, set->num_sumepsilon);
 }
@@ -6677,6 +6886,8 @@ SCIP_Bool SCIPsetIsFeasEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6699,6 +6910,8 @@ SCIP_Bool SCIPsetIsFeasLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6721,6 +6934,8 @@ SCIP_Bool SCIPsetIsFeasLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6743,6 +6958,8 @@ SCIP_Bool SCIPsetIsFeasGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6765,6 +6982,8 @@ SCIP_Bool SCIPsetIsFeasGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6817,6 +7036,7 @@ SCIP_Bool SCIPsetIsFeasIntegral(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSISINT(val, set->num_feastol);
 }
@@ -6830,6 +7050,7 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    assert(set != NULL);
    assert(SCIPsetIsGE(set, val, -2*set->num_feastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_feastol));
+   assert(SCIPisFinite(val));
 
    return (val <= set->num_feastol);
 }
@@ -6841,6 +7062,7 @@ SCIP_Real SCIPsetFeasFloor(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFLOOR(val, set->num_feastol);
 }
@@ -6852,6 +7074,7 @@ SCIP_Real SCIPsetFeasCeil(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSCEIL(val, set->num_feastol);
 }
@@ -6863,6 +7086,7 @@ SCIP_Real SCIPsetFeasRound(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSROUND(val, set->num_feastol);
 }
@@ -6874,6 +7098,7 @@ SCIP_Real SCIPsetFeasFrac(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFRAC(val, set->num_feastol);
 }
@@ -6888,6 +7113,8 @@ SCIP_Bool SCIPsetIsDualfeasEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6910,6 +7137,8 @@ SCIP_Bool SCIPsetIsDualfeasLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6932,6 +7161,8 @@ SCIP_Bool SCIPsetIsDualfeasLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6954,6 +7185,8 @@ SCIP_Bool SCIPsetIsDualfeasGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -6976,6 +7209,8 @@ SCIP_Bool SCIPsetIsDualfeasGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7028,6 +7263,7 @@ SCIP_Bool SCIPsetIsDualfeasIntegral(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSISINT(val, set->num_dualfeastol);
 }
@@ -7041,6 +7277,7 @@ SCIP_Bool SCIPsetIsDualfeasFracIntegral(
    assert(set != NULL);
    assert(SCIPsetIsGE(set, val, -set->num_dualfeastol));
    assert(SCIPsetIsLE(set, val, 1.0+set->num_dualfeastol));
+   assert(SCIPisFinite(val));
 
    return (val <= set->num_dualfeastol);
 }
@@ -7052,6 +7289,7 @@ SCIP_Real SCIPsetDualfeasFloor(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFLOOR(val, set->num_dualfeastol);
 }
@@ -7063,6 +7301,7 @@ SCIP_Real SCIPsetDualfeasCeil(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSCEIL(val, set->num_dualfeastol);
 }
@@ -7074,6 +7313,7 @@ SCIP_Real SCIPsetDualfeasRound(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSROUND(val, set->num_dualfeastol);
 }
@@ -7085,6 +7325,7 @@ SCIP_Real SCIPsetDualfeasFrac(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(val));
 
    return EPSFRAC(val, set->num_dualfeastol);
 }
@@ -7102,6 +7343,9 @@ SCIP_Bool SCIPsetIsLbBetter(
 {
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
+   assert(SCIPisFinite(newlb));
+   assert(SCIPisFinite(oldlb));
+   assert(SCIPisFinite(oldub));
 
    /* if lower bound is moved to 0 or higher, always accept bound change */
    if( oldlb < 0.0 && newlb >= 0.0 )
@@ -7123,6 +7367,9 @@ SCIP_Bool SCIPsetIsUbBetter(
 {
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
+   assert(SCIPisFinite(newub));
+   assert(SCIPisFinite(oldlb));
+   assert(SCIPisFinite(oldub));
 
    /* if upper bound is moved to 0 or lower, always accept bound change */
    if( oldub > 0.0 && newub <= 0.0 )
@@ -7139,6 +7386,7 @@ SCIP_Bool SCIPsetIsEfficacious(
    )
 {
    assert(set != NULL);
+   assert(SCIPisFinite(efficacy));
 
    if( root )
       return EPSP(efficacy, set->sepa_minefficacyroot);
@@ -7156,6 +7404,8 @@ SCIP_Bool SCIPsetIsRelEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7178,6 +7428,8 @@ SCIP_Bool SCIPsetIsRelLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7200,6 +7452,8 @@ SCIP_Bool SCIPsetIsRelLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7222,6 +7476,8 @@ SCIP_Bool SCIPsetIsRelGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7244,6 +7500,8 @@ SCIP_Bool SCIPsetIsRelGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7266,6 +7524,8 @@ SCIP_Bool SCIPsetIsSumRelEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7288,6 +7548,8 @@ SCIP_Bool SCIPsetIsSumRelLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7310,6 +7572,8 @@ SCIP_Bool SCIPsetIsSumRelLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7332,6 +7596,8 @@ SCIP_Bool SCIPsetIsSumRelGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
@@ -7354,6 +7620,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+   assert(SCIPisFinite(val1));
+   assert(SCIPisFinite(val2));
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */

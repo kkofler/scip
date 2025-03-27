@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -5715,7 +5715,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    nposvars = 0;
    for( v = nposbinvars - 1; v >= 0; --v )
    {
-      assert(SCIPvarGetType(binvars[v]) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(binvars[v]));
 
       if( v < nbinvars || SCIPvarIsBinary(binvars[v]) )
       {
@@ -7360,7 +7360,8 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
       return SCIP_OKAY;
 
    /* check variable types */
-   if( SCIPvarGetType(bilinvars[0]) != SCIP_VARTYPE_BINARY || SCIPvarGetType(bilinvars[1]) != SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(bilinvars[0]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(bilinvars[0])
+      || SCIPvarGetType(bilinvars[1]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(bilinvars[1]) )
       return SCIP_OKAY;
 
    /* get data of quadratic terms */

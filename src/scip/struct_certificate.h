@@ -37,6 +37,7 @@
 #include <stdio.h>
 
 #include "scip/def.h"
+#include "scip/pub_fileio.h"
 #include "scip/type_certificate.h"
 #include "scip/type_var.h"
 #include "scip/type_misc.h"
@@ -49,7 +50,7 @@ extern "C" {
 struct SCIP_CertificateBound
 {
    int                   varindex;           /**< index of this bound in the certificate file */
-   SCIP_Rational*        boundval;           /**< value of the bound */
+   SCIP_RATIONAL*        boundval;           /**< value of the bound */
    SCIP_BOUNDTYPE        boundtype;          /**< is it the upper bound? */
    SCIP_Bool             isbound;            /**< is the last printed index a bound? if it is not, the other information is not useful */
    SCIP_Bool             isglobal;           /**< is the bound global? */
@@ -89,8 +90,8 @@ struct SCIP_MirInfo
    int                   nlocalvars;         /**< number of local bounds used in transformation */
    int                   nslacks;            /**< number of integer slacks in the split */
    int                   nrounddownslacks;
-   SCIP_Rational*        rhs;                /**< rhs of the split disjunction */
-   SCIP_Rational*        frac;               /**< fractionality of the rhs in the mir cut */
+   SCIP_RATIONAL*        rhs;                /**< rhs of the split disjunction */
+   SCIP_RATIONAL*        frac;               /**< fractionality of the rhs in the mir cut */
    SCIP_Longint          arpos;              /**< position in the mirinfo array, so we can access it from the hashmap */
    SCIP_INTERVAL         onedivoneminusf0;   /**< rounded value of 1/(1-f0) that was used in MIR procedure */
    SCIP_Real             scale;              /**< scaling factor that was used in cut-postprocessing */
@@ -99,19 +100,19 @@ struct SCIP_MirInfo
 
 struct SCIP_Certnodedata
 {
-   SCIP_Longint          assumptionindex_self;/**< Line Index where assumption is printed */
-   SCIP_Longint          assumptionindex_left;/**< Line Index of left branch assumption */
-   SCIP_Longint          derindex_left;      /**< Line Index of derivation assuming assumption left */
-   SCIP_Rational*        derbound_left;      /**< Bound of left derivation */
-   SCIP_Longint          assumptionindex_right;/**< Line Index of right branch assumption */
-   SCIP_Longint          derindex_right;     /**< Line Index of derivation assuming assumption right */
-   SCIP_Rational*        derbound_right;     /**< Bound of right derivation */
-   SCIP_Longint          derindex_inherit;   /**< Line index of bound inherited from parent */
-   SCIP_Rational*        derbound_inherit;   /**< inherited bound */
-   unsigned int          leftfilled:1;       /**< Is the left node filled ? */
-   unsigned int          leftinfeas:1;       /**< Is the left node infeasible ? */
-   unsigned int          rightfilled:1;      /**< Is the node right filled ? */
-   unsigned int          rightinfeas:1;      /**< Is the node right infeasible ? */
+   SCIP_Longint          assumptionindex_self;/**< line index where node's last assumption is printed */
+   SCIP_Longint          derindex_self;      /**< line index of node's own bound, initially inherited from parent */
+   SCIP_RATIONAL*        derbound_self;      /**< node's own bound, initially inherited from parent */
+   SCIP_Longint          assumptionindex_left;/**< line index of left branch assumption */
+   SCIP_Longint          derindex_left;      /**< line index of derivation assuming assumption left */
+   SCIP_RATIONAL*        derbound_left;      /**< bound of left derivation */
+   SCIP_Longint          assumptionindex_right;/**< line index of right branch assumption */
+   SCIP_Longint          derindex_right;     /**< line index of derivation assuming assumption right */
+   SCIP_RATIONAL*        derbound_right;     /**< bound of right derivation */
+   unsigned int          leftfilled:1;       /**< is the data for the left child node set? */
+   unsigned int          leftinfeas:1;       /**< is the left node infeasible ? */
+   unsigned int          rightfilled:1;      /**< is the data for the right child node set? */
+   unsigned int          rightinfeas:1;      /**< is the node right infeasible ? */
    unsigned int          inheritedbound:1;   /**< did the node inherit its bound from its parent node? */
 };
 
@@ -121,13 +122,13 @@ struct SCIP_Certificate
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
    SCIP_HASHMAP*         nodedatahash;       /**< Hashmap storing pointer to data of each node */
    SCIP_HASHMAP*         aggrinfohash;       /**< Hashmap storing aggregation information of rows */
-   SCIP_HASHMAP*         mirinfohash;      /**< Hashmap storing split disjunctions */
+   SCIP_HASHMAP*         mirinfohash;        /**< Hashmap storing split disjunctions */
    SCIP_AGGREGATIONINFO** aggrinfo;          /**< array to store the aggregation info to avoid memory leaks */
-   SCIP_MIRINFO**        mirinfo;          /**< array to store the split info to avoid memory leaks */
+   SCIP_MIRINFO**        mirinfo;            /**< array to store the split info to avoid memory leaks */
    SCIP_Longint          aggrinfosize;       /**< size of aggrinfo array */
    SCIP_Longint          naggrinfos;         /**< number of elements in aggrinfo array */
-   SCIP_Longint          mirinfosize;      /**< size of mirinfo array */
-   SCIP_Longint          nmirinfos;        /**< number of elements in mirinfo array */
+   SCIP_Longint          mirinfosize;        /**< size of mirinfo array */
+   SCIP_Longint          nmirinfos;          /**< number of elements in mirinfo array */
    SCIP_CERTIFICATEBOUND* lastinfo;          /**< information on last printed certificate index */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
@@ -141,15 +142,16 @@ struct SCIP_Certificate
    char*                 derivationfilename; /**< name of the derivation file */
    char*                 origfilename;       /**< name of the original problem file */
    SCIP_Real             filesize;           /**< size of derivation file in MB */
+   SCIP_Real             maxfilesize;        /**< maximum size of derivation file in MB (stop printing if exceeded) */
    SCIP_HASHMAP*         rowdatahash;        /**< Hashmap storing mapping between rows and file index */
-   SCIP_Rational*        rootbound;          /**< the bound for the root node */
-   SCIP_Rational*        finalbound;         /**< the final dual bound value */
+   SCIP_RATIONAL*        rootbound;          /**< the bound for the root node */
+   SCIP_RATIONAL*        finalbound;         /**< the final dual bound value */
    SCIP_Longint          derindex_root;      /**< index of root bound in certificate */
    SCIP_Bool             rootinfeas;         /**< is the root node infeasible */
    SCIP_Bool             objintegral;        /**< is the objective always integral? copy this so we don't need the prob everywhere */
    SCIP_Bool             workingmirinfo;     /**< true if mirinfo is under construction and not sparsely stored, false otherwise */
-   SCIP_Bool             workingaggrinfo;     /**< true if aggrinfo is under construction (last entry not in hashmap), false otherwise */
-   SCIP_Rational**       vals;               /**< we maintain an array for solvals so we don't have to reallocate at every bounding call */
+   SCIP_Bool             workingaggrinfo;    /**< true if aggrinfo is under construction (last entry not in hashmap), false otherwise */
+   SCIP_RATIONAL**       vals;               /**< we maintain an array for solvals so we don't have to reallocate at every bounding call */
    int                   valssize;           /**< the size of the vals array */
 };
 

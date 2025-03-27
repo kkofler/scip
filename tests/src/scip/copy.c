@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -105,6 +105,12 @@ Test(copy, MIP, .description="tests MIP copy")
    /* check copy dimension */
    /* TODO: complete the copy */
    cr_expect(ntargetparams <= nsourceparams);
+   cr_expect(SCIPgetNBinVars(targetscip) == SCIPgetNBinVars(sourcescip));
+   cr_expect(SCIPgetNIntVars(targetscip) == SCIPgetNIntVars(sourcescip));
+   cr_expect(SCIPgetNBinImplVars(targetscip) == SCIPgetNBinImplVars(sourcescip));
+   cr_expect(SCIPgetNIntImplVars(targetscip) == SCIPgetNIntImplVars(sourcescip));
+   cr_expect(SCIPgetNContImplVars(targetscip) == SCIPgetNContImplVars(sourcescip));
+   cr_expect(SCIPgetNContVars(targetscip) == SCIPgetNContVars(sourcescip));
    cr_expect(SCIPgetNVars(targetscip) == SCIPgetNVars(sourcescip));
    cr_expect(SCIPgetNConss(targetscip) == SCIPgetNConss(sourcescip));
 
@@ -176,6 +182,16 @@ Test(copy, MIP, .description="tests MIP copy")
    /* solve both scips */
    SCIP_CALL( SCIPsolve(sourcescip) );
    SCIP_CALL( SCIPsolve(targetscip) );
+
+   /* compare solved dimensions */
+   cr_expect(SCIPgetNBinVars(targetscip) == SCIPgetNBinVars(sourcescip));
+   cr_expect(SCIPgetNIntVars(targetscip) == SCIPgetNIntVars(sourcescip));
+   cr_expect(SCIPgetNBinImplVars(targetscip) == SCIPgetNBinImplVars(sourcescip));
+   cr_expect(SCIPgetNIntImplVars(targetscip) == SCIPgetNIntImplVars(sourcescip));
+   cr_expect(SCIPgetNContImplVars(targetscip) == SCIPgetNContImplVars(sourcescip));
+   cr_expect(SCIPgetNContVars(targetscip) == SCIPgetNContVars(sourcescip));
+   cr_expect(SCIPgetNVars(targetscip) == SCIPgetNVars(sourcescip));
+   cr_expect(SCIPgetNConss(targetscip) == SCIPgetNConss(sourcescip));
 
    /* compare optimal bounds */
    cr_expect(SCIPgetDualbound(targetscip) == SCIPgetPrimalbound(targetscip));

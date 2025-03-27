@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -819,7 +819,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    SCIP_Real targetover = 1.0;
 
    /* print information on estimators */
-   SCIP_CALL( printSignomial(scip, expr, nlhdlrexprdata));
+   SCIP_CALL( printSignomial(scip, expr, nlhdlrexprdata) );
    SCIPinfoMessage(scip, NULL, " Auxvalue: %f, targetvalue: %f, %sestimate.", auxvalue, targetvalue, overestimate ? "over" : "under");
 
    targetunder = 1.0;
@@ -1113,7 +1113,7 @@ SCIPincludeNlhdlrSignomial(
    assert(scip != NULL);
 
    /* create nonlinear handler specific data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata));
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    BMSclearMemory(nlhdlrdata);
 
    SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,

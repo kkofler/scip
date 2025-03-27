@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -153,6 +153,7 @@ SCIP_RETCODE doRelaxCreate(
    (*relax)->nseparated = 0;
    (*relax)->lastsolvednode = -1;
    (*relax)->initialized = FALSE;
+   (*relax)->exact = FALSE;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
@@ -370,6 +371,10 @@ SCIP_RETCODE SCIPrelaxExec(
 
    *result = SCIP_DIDNOTRUN;
 
+   /* check, if the relaxator is compatible with exact solving mode */
+   if( set->exact_enabled && !relax->exact )
+      return SCIP_OKAY;
+
    /* check, if the relaxation is already solved */
    if( relax->lastsolvednode == stat->ntotalnodes && ! SCIPinProbing(set->scip) )
       return SCIP_OKAY;
@@ -536,6 +541,16 @@ void SCIPrelaxSetExitsol(
    assert(relax != NULL);
 
    relax->relaxexitsol = relaxexitsol;
+}
+
+/** marks the relaxator as safe to use in exact solving mode */
+void SCIPrelaxMarkExact(
+   SCIP_RELAX*           relax               /**< relaxation handler  */
+   )
+{
+   assert(relax != NULL);
+
+   relax->exact = TRUE;
 }
 
 /** gets name of relaxation handler */

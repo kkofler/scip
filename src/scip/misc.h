@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -350,19 +350,12 @@ SCIP_Real SCIPnegateReal(
    SCIP_Real             x                   /**< value to negate */
    );
 
-/** checks, if value is integral without any tolerances */
-SCIP_EXPORT
-SCIP_Bool SCIPisExactlyIntegral(
-   SCIP_Real             val                 /**< value to process */
-   );
-
 /** internal random number generator methods
  *
  * see \ref RandomNumbers for public random number generator methods
  */
 
 /** creates and initializes a random number generator */
-SCIP_EXPORT
 SCIP_RETCODE SCIPrandomCreate(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -370,14 +363,12 @@ SCIP_RETCODE SCIPrandomCreate(
    );
 
 /** frees a random number generator */
-SCIP_EXPORT
 void SCIPrandomFree(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** initializes a random number generator with a given start seed */
-SCIP_EXPORT
 void SCIPrandomSetSeed(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    unsigned int          initseed            /**< initial random seed */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2460,9 +2460,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC)
       }
 
       SCIPdialogMessage(scip, NULL, "\n");
-      SCIPdialogMessage(scip, NULL, "changed problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
-         SCIPgetNVars(scip), SCIPgetNBinVars(scip), SCIPgetNIntVars(scip), SCIPgetNImplVars(scip), SCIPgetNContVars(scip),
-         SCIPgetNConss(scip));
+      SCIPdialogMessage(scip, NULL, "changed problem has %d variables (%d bin, %d int, %d cont) and %d constraints\n",
+            SCIPgetNVars(scip), SCIPgetNBinVars(scip) + SCIPgetNBinImplVars(scip),
+            SCIPgetNIntVars(scip) + SCIPgetNIntImplVars(scip), SCIPgetNContVars(scip) + SCIPgetNContImplVars(scip),
+            SCIPgetNConss(scip));
 
       SCIPdialogMessage(scip, NULL, "increased branching priority of new binary variables");
 

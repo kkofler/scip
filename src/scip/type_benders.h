@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -77,6 +77,13 @@ enum SCIP_BendersSubType
    SCIP_BENDERSSUBTYPE_UNKNOWN         = 4,  /**< the default type before the type is known */
 };
 typedef enum SCIP_BendersSubType SCIP_BENDERSSUBTYPE;
+
+enum SCIP_BendersObjectiveType
+{
+   SCIP_BENDERSOBJTYPE_SUM    = 0,           /**< the individual subproblem objectives are summed in the master problem */
+   SCIP_BENDERSOBJTYPE_MAX    = 1,           /**< the minimum of the maximum subproblem objectives is computed in the master problem */
+};
+typedef enum SCIP_BendersObjectiveType SCIP_BENDERSOBJTYPE;
 
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */

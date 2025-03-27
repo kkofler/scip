@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -263,7 +263,8 @@ SCIP_RETCODE initConcsolver(
 
    /* we force the copying of symmetry constraints that may have been detected during a central presolving step;
     * otherwise, the copy may become invalid */
-   if( SCIPsetBoolParam(scip, "constraints/orbitope/forceconscopy", TRUE) != SCIP_OKAY
+   if( SCIPsetBoolParam(scip, "constraints/orbitope_full/forceconscopy", TRUE) != SCIP_OKAY
+      || SCIPsetBoolParam(scip, "constraints/orbitope_pp/forceconscopy", TRUE) != SCIP_OKAY
       || SCIPsetBoolParam(scip, "constraints/orbisack/forceconscopy", TRUE) != SCIP_OKAY
       || SCIPsetBoolParam(scip, "constraints/symresack/forceconscopy", TRUE) != SCIP_OKAY )
    {
@@ -741,7 +742,7 @@ SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
       /* bound is better so incremented counters for statistics and pass it to the sync propagator */
       ++(*ntighterbnds);
 
-      if( SCIPvarGetType(var) <= SCIP_VARTYPE_INTEGER )
+      if( SCIPvarIsNonimpliedIntegral(var) )
          ++(*ntighterintbnds);
 
       SCIP_CALL( SCIPaddConcurrentBndchg(data->solverscip, var, newbound, boundtype) );

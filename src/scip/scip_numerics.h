@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -42,6 +42,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 
@@ -876,7 +877,7 @@ SCIP_Bool SCIPparseReal(
 SCIP_Bool SCIPparseRational(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to search */
-   SCIP_Rational*        value,              /**< pointer to store the parsed value */
+   SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -470,10 +470,10 @@ SCIP_RETCODE createSubscip(
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
 #ifdef SCIP_MORE_DEBUG /* we print statistics later, so we need to copy statistics tables */
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, &success) );
 #else
    SCIP_CALL( SCIPcopyPlugins(scip, *subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 #endif
 
    /* the plugins were successfully copied */
@@ -1544,6 +1544,8 @@ SCIP_RETCODE sortComponents(
 
       for( v = 0; v < ncvars; ++v )
       {
+         if( SCIPvarIsImpliedIntegral(vars[cvars[v]]) )
+            continue;
          /* check whether variable is of binary or integer type */
          if( SCIPvarGetType(vars[cvars[v]]) == SCIP_VARTYPE_BINARY )
             nbinvars++;
@@ -2317,7 +2319,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) || SCIPisExactSolve(scip) )
+   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) || SCIPisExact(scip) )
       return SCIP_OKAY;
 
    /* do not run, if not all variables are explicitly known */

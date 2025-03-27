@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -221,12 +221,6 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP_Real             maxbounddist        /**< new maxbounddist of the branching rule */
-   );
-
-/** flags this branching rule to be safe for use in exact solving mode */
-SCIP_EXPORT
-void SCIPsetBranchruleExact(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
 /* @} */

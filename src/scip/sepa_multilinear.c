@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -637,7 +637,7 @@ SCIP_RETCODE separateOneFlowerOld(
       SCIP_HYPERGRAPH_EDGEDATA* basedata;
       SCIP_HYPERGRAPH_VERTEX* basevertices;
       int nbasevertices;
-      int nbaseseparated = 0;  /**< Number of cuts separated for this base edge. */
+      int nbaseseparated = 0;  /* Number of cuts separated for this base edge. */
 
       basedata = SCIPhypergraphEdgeData(hypergraph, base);
 
@@ -1358,7 +1358,6 @@ SCIP_DECL_SEPAFREE(sepaFreeMultilinear)
 static
 SCIP_DECL_SEPAINIT(sepaInitMultilinear)
 {  /*lint --e{715}*/
-
    SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);

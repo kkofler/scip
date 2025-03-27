@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -42,7 +42,6 @@
 #include "scip/pub_var.h"
 #include "scip/reader_cip.h"
 #include "scip/scip_cons.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -428,10 +427,6 @@ SCIP_RETCODE getVariable(
 
    /* parse the variable */
    SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIP_CALL( SCIPaddVarExactData(scip, var, NULL, NULL, NULL) );
-   }
 
    if( !success )
    {
@@ -837,7 +832,7 @@ SCIP_DECL_READERREAD(readerReadCip)
             cipinput.haserror = TRUE;
             goto TERMINATE;
          }
-         SCIP_CALL(retcode);
+         SCIP_CALL( retcode );
 
          break;
       case CIP_FIXEDVARS:
@@ -848,7 +843,7 @@ SCIP_DECL_READERREAD(readerReadCip)
             cipinput.haserror = TRUE;
             goto TERMINATE;
          }
-         SCIP_CALL(retcode);
+         SCIP_CALL( retcode );
 
          break;
       case CIP_CONSTRAINTS:
@@ -859,7 +854,7 @@ SCIP_DECL_READERREAD(readerReadCip)
             cipinput.haserror = TRUE;
             goto TERMINATE;
          }
-         SCIP_CALL(retcode);
+         SCIP_CALL( retcode );
 
          break;
       default:

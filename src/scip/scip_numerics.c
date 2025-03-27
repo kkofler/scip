@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -448,7 +448,7 @@ SCIP_Bool SCIPparseReal(
 SCIP_Bool SCIPparseRational(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to search */
-   SCIP_Rational*        value,              /**< pointer to store the parsed value */
+   SCIP_RATIONAL*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
@@ -468,21 +468,21 @@ SCIP_Bool SCIPparseRational(
    /* test for a special infinity first */
    if( strncmp(localstr, "+infinity", 9) == 0 )
    {
-      RatSetString(value, "inf");
+      SCIPrationalSetInfinity(value);
       *endptr = (char*)(localstr + 9);
       return TRUE;
    }
    else if( strncmp(localstr, "-infinity", 9) == 0 )
    {
-      RatSetString(value, "-inf");
+      SCIPrationalSetNegInfinity(value);
       *endptr = (char*)(localstr + 9);
       return TRUE;
    }
    else
    {
       /* parse a finite value */
-      RatSetString(value, str);
-      *endptr = (char*)(localstr + RatStrlen(value));
+      SCIPrationalSetString(value, str);
+      *endptr = (char*)(localstr + SCIPrationalStrLen(value));
       return TRUE;
    }
 }

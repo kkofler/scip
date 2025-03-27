@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -374,7 +374,7 @@ SCIP_RETCODE SCIPgetNLPNlRowsStat(
    int*                  nnonlineareq        /**< buffer to store number of nonlinear equalities or ranged rows in NLP, or NULL */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPnlpGetNlRowsStat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNLPNlRowsStat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -575,7 +575,7 @@ SCIP_RETCODE decompHorizonInitialize(
       /* determine the block size and the variable types */
       do
       {
-         if( SCIPvarGetType(varscopy[currblockend]) < SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarIsNonimpliedIntegral(varscopy[currblockend]) )
             ++ndiscretevars;
 
          currblockend++;
@@ -1446,7 +1446,7 @@ SCIP_RETCODE selectInitialVariableDecomposition(
       ndiscblockvars = 0;
       for( v = currblockstart; v < currblockend; ++v )
       {
-         if( SCIPvarGetType(varscopy[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(varscopy[v]) == SCIP_VARTYPE_INTEGER )
+         if( SCIPvarIsNonimpliedIntegral(varscopy[v]) )
             discvaridxs[ndiscblockvars++] = v;
       }
 
@@ -1913,7 +1913,7 @@ SCIP_RETCODE determineVariableFixingsDecomp(
             {
                SCIP_VAR* var = vars[v];
 
-               if( heurdata->fixcontvars || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+               if( heurdata->fixcontvars || SCIPvarIsIntegral(var) )
                {
                   SCIP_Real fixval;
 
@@ -2204,7 +2204,7 @@ SCIP_RETCODE setupSubScip(
          cutoff = (1 + heurdata->minimprove) * SCIPgetUpperbound(scip);
    }
    cutoff = MIN(upperbound, cutoff);
-   SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
+   SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* set solve limits for sub-SCIP */
    SCIP_CALL( setLimits(scip, subscip, solvelimits) );
@@ -2626,6 +2626,9 @@ SCIP_RETCODE SCIPincludeHeurGins(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecGins, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyGins) );

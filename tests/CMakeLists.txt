@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -62,10 +62,16 @@ if( CRITERION_FOUND )
     # and the source directory of the parent SCIP directory to be able to include C-sources of SCIP
     # into our unittests
     #
-    include_directories(${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+    include_directories(BEFORE PUBLIC ${CRITERION_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+
+    if(SANITIZE)
+        find_package(Sanitizers)
+    endif(SANITIZE)
+
     if(TEST_EXACTSOLVE)
         include_directories(${GMP_INCLUDE_DIRS})
     endif()
+
     #
     # Prepare unit test executable for every source file
     #
@@ -101,6 +107,10 @@ if( CRITERION_FOUND )
         if(TEST_EXACTSOLVE) # TODO: Check why libscip does not pull in GMP automatically. There should be a CMake way.
             target_link_libraries(${testName} gmp)
         endif()
+
+        if(SANITIZE)
+            add_sanitizers(${testName})
+        endif(SANITIZE)
 
         #
         # use the directory name (relative to src/) to build the executable

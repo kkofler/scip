@@ -37,18 +37,18 @@
 #include <stdio.h>
 
 #include "scip/def.h"
-#include "scip/rational.h"
 #include "blockmemshell/memory.h"
+#include "scip/rational.h"
+#include "scip/type_event.h"
+#include "scip/type_lpexact.h"
+#include "scip/type_misc.h"
+#include "scip/type_prob.h"
+#include "scip/type_rational.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
-#include "scip/type_misc.h"
-#include "scip/type_lpexact.h"
-#include "scip/type_var.h"
-#include "scip/type_prob.h"
 #include "scip/type_sol.h"
-#include "scip/pub_lp.h"
-
-#include "scip/struct_lpexact.h"
+#include "scip/type_var.h"
+#include "scip/pub_lpexact.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,7 +68,7 @@ SCIP_RETCODE SCIPcolExactCreate(
    SCIP_VAR*             var,                /**< variable, this column represents */
    int                   len,                /**< number of nonzeros in the column */
    SCIP_ROWEXACT**       rows,               /**< array with rows of column entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of column entries */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of column entries */
    SCIP_Bool             removable           /**< should the column be removed from the LP due to aging or cleanup? */
    );
 
@@ -93,7 +93,7 @@ SCIP_RETCODE SCIPcolExactAddCoef(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        val                 /**< value of coefficient */
+   SCIP_RATIONAL*        val                 /**< value of coefficient */
    );
 
 /** deletes coefficient from column */
@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPcolExactChgCoef(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        val                 /**< value of coefficient */
+   SCIP_RATIONAL*        val                 /**< value of coefficient */
    );
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
@@ -123,7 +123,7 @@ SCIP_RETCODE SCIPcolExactIncCoef(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        incval              /**< value to add to the coefficient */
+   SCIP_RATIONAL*        incval              /**< value to add to the coefficient */
    );
 
 /** changes objective value of column */
@@ -131,7 +131,7 @@ SCIP_RETCODE SCIPcolExactChgObj(
    SCIP_COLEXACT*        col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
-   SCIP_Rational*        newobj              /**< new objective value */
+   SCIP_RATIONAL*        newobj              /**< new objective value */
    );
 
 /** changes lower bound of column */
@@ -139,7 +139,7 @@ SCIP_RETCODE SCIPcolExactChgLb(
    SCIP_COLEXACT*        col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
-   SCIP_Rational*        newlb               /**< new lower bound value */
+   SCIP_RATIONAL*        newlb               /**< new lower bound value */
    );
 
 /** changes upper bound of column */
@@ -147,7 +147,7 @@ SCIP_RETCODE SCIPcolExactChgUb(
    SCIP_COLEXACT*        col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
-   SCIP_Rational*        newub               /**< new upper bound value */
+   SCIP_RATIONAL*        newub               /**< new upper bound value */
    );
 
 /*
@@ -171,16 +171,6 @@ int SCIProwExactGetIndex(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 
-/** get the length of a row */
-int SCIProwExactGetNNonz(
-   SCIP_ROWEXACT*        row                 /**< LP row */
-   );
-
-/** returns TRUE iff row is member of current LP */
-SCIP_Bool SCIProwExactIsInLP(
-   SCIP_ROWEXACT*        row                 /**< LP row */
-   );
-
 /** return TRUE iff row is modifiable */
 SCIP_Bool SCIProwExactIsModifiable(
    SCIP_ROWEXACT*        row                 /**< LP row */
@@ -197,7 +187,7 @@ SCIP_RETCODE SCIProwExactChgLhs(
    SCIP_ROWEXACT*        row,                /**< exact LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-   SCIP_Rational*        lhs                 /**< new left hand side */
+   SCIP_RATIONAL*        lhs                 /**< new left hand side */
    );
 
 /** changes right hand side of exact LP row */
@@ -205,7 +195,7 @@ SCIP_RETCODE SCIProwExactChgRhs(
    SCIP_ROWEXACT*        row,                /**< exact LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-   SCIP_Rational*        rhs                 /**< new right hand side */
+   SCIP_RATIONAL*        rhs                 /**< new right hand side */
    );
 
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
@@ -214,11 +204,11 @@ SCIP_COLEXACT* SCIPcolGetColExact(
    );
 
 /** calculates the Farkas coefficient or reduced cost of a column i using the given dual Farkas vector y */
-void SCIPcolExactCalcFarkasRedcostCoef(
+SCIP_RETCODE SCIPcolExactCalcFarkasRedcostCoef(
    SCIP_COLEXACT*        col,                /**< LP column */
    SCIP_SET*             set,                /**< SCIP settings pointer */
-   SCIP_Rational*        result,             /**< rational to store the result */
-   SCIP_Rational**       dual,               /**< dense dual Farkas vector, NULL to use internal row-values */
+   SCIP_RATIONAL*        result,             /**< rational to store the result */
+   SCIP_RATIONAL**       dual,               /**< dense dual Farkas vector, NULL to use internal row-values */
    SCIP_Bool             usefarkas           /**< should the farkas coefficient be computed ? */
    );
 
@@ -233,15 +223,17 @@ SCIP_RETCODE SCIProwExactCreate(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COLEXACT**       cols,               /**< array with columns of row entries */
-   SCIP_Rational**       vals,               /**< array with coefficients of row entries */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_ROWORIGINTYPE    origintype,         /**< type of origin of row */
-   SCIP_Bool             isfprelaxable,      /**< is it possible to make fp-relaxation of this row */
-   void*                 origin              /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of row entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    );
 
-/** creates and captures an exact LP row from a fp row */
+/** creates and captures an exact LP row from a fp row
+ *
+ *  @note This may change the floating-point coefficients slightly if the rational representation is rounded to smaller
+ *  denominators according to parameter exact/cutmaxdenomsize.
+ */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -287,13 +279,13 @@ SCIP_RETCODE SCIPlpExactLink(
  * lp methods
  */
 
-/** returns whether it is possible to use neumair-shcherbina bounding method */
-SCIP_Bool SCIPlpExactBSpossible(
+/** returns whether the success rate of the Neumaier-Shcherbina safe bounding method is sufficiently high */
+SCIP_Bool SCIPlpExactBoundShiftUseful(
    SCIP_LPEXACT*         lp                  /**< pointer to LP data object */
    );
 
 /** returns whether it is possible to use project and shift bounding method */
-SCIP_Bool SCIPlpExactPSpossible(
+SCIP_Bool SCIPlpExactProjectShiftPossible(
    SCIP_LPEXACT*         lp                  /**< pointer to LP data object */
    );
 
@@ -337,12 +329,12 @@ SCIP_RETCODE SCIPlpExactAddRow(
    );
 
 /** returns the feasibility of a row for the given solution */
-void SCIProwExactGetSolFeasibility(
+SCIP_RETCODE SCIProwExactGetSolFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** does activity computation with running error analysis for a row, return TRUE on success */
@@ -356,13 +348,13 @@ SCIP_Bool SCIProwExactGetSolActivityWithErrorbound(
    );
 
 /** returns the activity of a row for a given solution */
-void SCIProwExactGetSolActivity(
+SCIP_RETCODE SCIProwExactGetSolActivity(
    SCIP_ROWEXACT*        rowexact,           /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             useexact,           /**< should an exact solution be used */
-   SCIP_Rational*        result              /**< resulting activity */
+   SCIP_RATIONAL*        result              /**< resulting activity */
    );
 
 /** decreases usage counter of LP row, and frees memory if necessary */
@@ -395,7 +387,7 @@ SCIP_RETCODE SCIProwExactAddConstant(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
-   SCIP_Rational*        addval              /**< constant value to add to the row */
+   SCIP_RATIONAL*        addval              /**< constant value to add to the row */
    );
 
 /** adds a previously non existing coefficient to an LP row */
@@ -406,7 +398,7 @@ SCIP_RETCODE SCIProwExactAddCoef(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_COLEXACT*        colexact,           /**< LP column */
-   SCIP_Rational*        val                 /**< value of coefficient */
+   SCIP_RATIONAL*        val                 /**< value of coefficient */
    );
 
 /** deletes coefficient from row */
@@ -425,7 +417,7 @@ SCIP_RETCODE SCIProwExactChgCoef(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_COLEXACT*        col,                /**< LP column */
-   SCIP_Rational*        val                 /**< value of coefficient */
+   SCIP_RATIONAL*        val                 /**< value of coefficient */
    );
 
 /** increases value of an existing or nonexisting coefficient in an LP column */
@@ -436,7 +428,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_COLEXACT*        col,                /**< LP column */
-   SCIP_Rational*        incval              /**< valpelue to add to the coefficient */
+   SCIP_RATIONAL*        incval              /**< valpelue to add to the coefficient */
    );
 
 /** changes constant value of a row */
@@ -444,35 +436,35 @@ SCIP_RETCODE SCIProwExactChgConstant(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
-   SCIP_Rational*        constant            /**< new constant value */
+   SCIP_RATIONAL*        constant            /**< new constant value */
    );
 
 /** returns the feasibility of a row in the current LP solution: negative value means infeasibility */
-void SCIProwExactGetLPFeasibility(
+SCIP_RETCODE SCIProwExactGetLPFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
-   SCIP_Rational*        result              /**< rational pointer to store the result */
+   SCIP_RATIONAL*        result              /**< rational pointer to store the result */
    );
 
 /** returns the pseudo feasibility of a row in the current pseudo solution: negative value means infeasibility */
-void SCIProwExactGetPseudoFeasibility(
+SCIP_RETCODE SCIProwExactGetPseudoFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Rational*        result              /**< rational pointer to store the result */
+   SCIP_RATIONAL*        result              /**< rational pointer to store the result */
    );
 
 /** returns the activity of a row in the current LP solution */
-SCIP_Rational* SCIProwExactGetLPActivity(
+SCIP_RATIONAL* SCIProwExactGetLPActivity(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
 /** returns the pseudo activity of a row in the current pseudo solution */
-SCIP_Rational* SCIProwExactGetPseudoActivity(
+SCIP_RATIONAL* SCIProwExactGetPseudoActivity(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_STAT*            stat                /**< problem statistics */
    );
@@ -501,37 +493,37 @@ void SCIProwExactRecalcPseudoActivity(
    );
 
 /** gets objective value of column */
-SCIP_Rational* SCIPcolExactGetObj(
+SCIP_RATIONAL* SCIPcolExactGetObj(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
 /** gets lower bound of column */
-SCIP_Rational* SCIPcolExactGetLb(
+SCIP_RATIONAL* SCIPcolExactGetLb(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
 /** gets upper bound of column */
-SCIP_Rational* SCIPcolExactGetUb(
+SCIP_RATIONAL* SCIPcolExactGetUb(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
 /** gets best bound of column with respect to the objective function */
-SCIP_Rational* SCIPcolExactGetBestBound(
+SCIP_RATIONAL* SCIPcolExactGetBestBound(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
 /** gets the primal LP solution of a column */
-SCIP_Rational* SCIPcolExactGetPrimsol(
+SCIP_RATIONAL* SCIPcolExactGetPrimsol(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
 /** gets the minimal LP solution value, this column ever assumed */
-SCIP_Rational* SCIPcolExactGetMinPrimsol(
+SCIP_RATIONAL* SCIPcolExactGetMinPrimsol(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
 /** gets the maximal LP solution value, this column ever assumed */
-SCIP_Rational* SCIPcolExactGetMaxPrimsol(
+SCIP_RATIONAL* SCIPcolExactGetMaxPrimsol(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
@@ -544,8 +536,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_VAR*             var,                /**< problem variable that changed */
-   SCIP_Rational*        oldobj,             /**< old objective value of variable */
-   SCIP_Rational*        newobj              /**< new objective value of variable */
+   SCIP_RATIONAL*        oldobj,             /**< old objective value of variable */
+   SCIP_RATIONAL*        newobj              /**< new objective value of variable */
    );
 
 /** updates current root pseudo objective value for a global change in a variable's lower bound */
@@ -553,8 +545,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
-   SCIP_Rational*        oldlb,              /**< old lower bound of variable */
-   SCIP_Rational*        newlb               /**< new lower bound of variable */
+   SCIP_RATIONAL*        oldlb,              /**< old lower bound of variable */
+   SCIP_RATIONAL*        newlb               /**< new lower bound of variable */
    );
 
 /** updates current pseudo and loose objective value for a change in a variable's lower bound */
@@ -562,8 +554,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarLb(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
-   SCIP_Rational*        oldlb,              /**< old lower bound of variable */
-   SCIP_Rational*        newlb               /**< new lower bound of variable */
+   SCIP_RATIONAL*        oldlb,              /**< old lower bound of variable */
+   SCIP_RATIONAL*        newlb               /**< new lower bound of variable */
    );
 
 /** updates current root pseudo objective value for a global change in a variable's upper bound */
@@ -571,8 +563,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarUbGlobal(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
-   SCIP_Rational*        oldub,              /**< old upper bound of variable */
-   SCIP_Rational*        newub               /**< new upper bound of variable */
+   SCIP_RATIONAL*        oldub,              /**< old upper bound of variable */
+   SCIP_RATIONAL*        newub               /**< new upper bound of variable */
    );
 
 /** updates current pseudo objective value for a change in a variable's upper bound */
@@ -580,8 +572,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarUb(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< problem variable that changed */
-   SCIP_Rational*        oldub,              /**< old upper bound of variable */
-   SCIP_Rational*        newub               /**< new upper bound of variable */
+   SCIP_RATIONAL*        oldub,              /**< old upper bound of variable */
+   SCIP_RATIONAL*        newub               /**< new upper bound of variable */
    );
 
 /** informs LP, that given variable was added to the problem */
@@ -644,15 +636,14 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
 SCIP_RETCODE SCIPlpExactGetPrimalRay(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational**       ray                 /**< array for storing primal ray values, they are stored w.r.t. the problem index of the variables,
+   SCIP_RATIONAL**       ray                 /**< array for storing primal ray values, they are stored w.r.t. the problem index of the variables,
                                               *   so the size of this array should be at least number of active variables
                                               *   (all entries have to be initialized to 0 before) */
    );
 
-/** stores the dual Farkas multipliers for infeasibility proof in rows. besides, the proof is checked for validity if
- *  lp/checkfarkas = TRUE.
+/** stores the dual Farkas multipliers for infeasibility proof in rows. besides
  *
- *  @note the check will not be performed if @p valid is NULL.
+ *  @note The Farkas proof is checked for validity if lp/checkfarkas = TRUE and @p valid is not NULL.
  */
 SCIP_RETCODE SCIPlpExactGetDualfarkas(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
@@ -677,7 +668,7 @@ SCIP_RETCODE SCIPlpExactGetIterations(
 void SCIPlpExactGetObjval(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational*        res                 /**< result pointer to store rational */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    );
 
 /** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
@@ -686,18 +677,18 @@ void SCIPlpExactGetObjval(
 void SCIPlpExactGetPseudoObjval(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Rational*        res                 /**< result pointer to store rational */
+   SCIP_RATIONAL*        res                 /**< result pointer to store rational */
    );
 
 /** removes all columns after the given number of cols from the LP */
-SCIP_RETCODE SCIPlpExactshrinkCols(
+SCIP_RETCODE SCIPlpExactShrinkCols(
    SCIP_LPEXACT*         lpexact,            /**< LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   newncols            /**< new number of columns in the LP */
    );
 
 /** removes and releases all rows after the given number of rows from the LP */
-SCIP_RETCODE SCIPlpExactshrinkRows(
+SCIP_RETCODE SCIPlpExactShrinkRows(
    SCIP_LPEXACT*         lpexact,            /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -730,16 +721,6 @@ SCIP_RETCODE SCIPlpExactClear(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** checks whether primal solution satisfies all integrality restrictions exactly.
- * This checks either the fp solution exactly or checks the exact solution, if one exists.
- */
-SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_RESULT*          result              /**< result pointer */
-   );
-
 /** forces an exact lp to be solved in the next exact bound computation */
 void SCIPlpExactForceExactSolve(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
@@ -761,7 +742,7 @@ void SCIPlpExactAllowExactSolve(
 
 /** gets solution status of current exact LP */
 SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
-   SCIP_LPEXACT*         lpexact              /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 /** sets the upper objective limit of the exact LP solver */
@@ -815,27 +796,21 @@ SCIP_RETCODE SCIPlpExactFreeState(
 
 /** starts exact LP diving and saves bounds and objective values of columns to the current nodes's values */
 SCIP_RETCODE SCIPlpExactStartDive(
-    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-    BMS_BLKMEM*           blkmem,             /**< block memory */
-    SCIP_SET*             set,                /**< global SCIP settings */
-    SCIP_STAT*            stat                /**< problem statistics */
-    );
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
 
 /** quits exact LP diving and resets bounds and objective values of columns to the current node's values */
 SCIP_RETCODE SCIPlpExactEndDive(
-    SCIP_LPEXACT*         lpexact,            /**< current LP data */
-    BMS_BLKMEM*           blkmem,             /**< block memory */
-    SCIP_SET*             set,                /**< global SCIP settings */
-    SCIP_STAT*            stat,               /**< problem statistics */
-    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-    SCIP_VAR**            vars,               /**< array with all active variables */
-    int                   nvars               /**< number of active variables */
-    );
-
-/** returns whether the exact LP is in diving mode */
-SCIP_EXPORT
-SCIP_Bool SCIPlpExactDiving(
-   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR**            vars,               /**< array with all active variables */
+   int                   nvars               /**< number of active variables */
    );
 
 /** writes exact LP to a file */
@@ -848,6 +823,13 @@ SCIP_RETCODE SCIPlpExactWrite(
 void SCIPlpExactOverwriteFpDualSol(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
+   );
+
+/** synchronizes the exact LP with cuts from the floating-point LP */
+SCIP_RETCODE SCIPlpExactSyncLPs(
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 #ifdef __cplusplus

@@ -31,9 +31,10 @@
 */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/* #define VERIFY_OUT */ /** uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
+/* #define VERIFY_OUT */ /* uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
 
-/* #define USEOBJLIM */  /** uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c;  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex does not stop but increasess the precision */
+/* #define USEOBJLIM */  /* uncomment to pass objlimit to exact lp solver; same as in cons_exactlinear.c;  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex does not stop but increasess the precision */
+
 #include "scip/def.h"
 
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
@@ -96,7 +97,7 @@ struct SCIP_LPiExact
 #define __QS_PRINTLOC__ fprintf(stderr,", in (%s:%d)\n", __FILE__, __LINE__);
 
 /** This macro is to print error messages and jump to the given point in the code, it also print the
- * file and line where this happend */
+ *  file and line where this happend */
 #define QS_TESTG(A,B,...) do{{\
 	 if (A){				\
 	    fprintf(stderr,__VA_ARGS__);	\
@@ -111,7 +112,7 @@ struct SCIP_LPiExact
 	    return SCIP_LPERROR;}}}while(0)
 
 /** return value macro, if the value is non-zero, write to standard error the returning code and
- * where this happened, and return SCIP_ERROR, otherwise return normal SCIP_OKAY termination code. */
+ *  where this happened, and return SCIP_ERROR, otherwise return normal SCIP_OKAY termination code. */
 #define QS_RETURN(A) do{\
       const int __RVAL__ = (A);						\
       if (__RVAL__){							\
@@ -121,7 +122,7 @@ struct SCIP_LPiExact
       return SCIP_OKAY;}while(0)
 
 /** return value macro, if the value is non-zero, write to standard error the returning code and
- * where this happened, and return SCIP_ERROR, otherwise do nothing. */
+ *  where this happened, and return SCIP_ERROR, otherwise do nothing. */
 #define QS_CONDRET(A) do{\
       const int __RVAL__ = (A);						\
       if (__RVAL__){							\
@@ -152,8 +153,7 @@ void printGMP(
    )
 {
    char* buffer;
-   buffer = (char*) malloc(mpz_sizeinbase(mpq_numref(val),
-                                          10) + mpz_sizeinbase(mpq_denref(val), 10) + 3);
+   buffer = (char*) malloc(mpz_sizeinbase(mpq_numref(val), 10) + mpz_sizeinbase(mpq_denref(val), 10) + 3);
    (void)mpq_get_str(buffer, 10, val);
    printf("%s \n", buffer);
    free(buffer);
@@ -180,9 +180,9 @@ int rowpacketNum(
 /** store row and column basis status in a packed LPi state object */
 static
 void lpistatePack(
-   SCIP_LPISTATE*       lpistate,            /**< pointer to LPi state data */
-   const int*           cstat,               /**< basis status of columns in unpacked format */
-   const int*           rstat                /**< basis status of rows in unpacked format */
+   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const int*            cstat,              /**< basis status of columns in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format */
    )
 {
    assert(lpistate != NULL);
@@ -261,10 +261,10 @@ SCIP_RETCODE ensureTabMem(
    register int i;
    if( lpi->tbsz < sz )
    {
-      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->itab), sz*2) ); 
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->itab), sz*2) );
       SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->ibas), sz*2) );
       for( i = lpi->tbsz ; i < sz * 2 ; i++ )
-	      mpq_init(lpi->itab[i]);
+         mpq_init(lpi->itab[i]);
       lpi->tbsz = sz*2;
    }
    return SCIP_OKAY;
@@ -303,8 +303,8 @@ SCIP_RETCODE ensureRowMem(
       SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->irbeg), nrows * 2) );
       for (i = lpi->rowspace ; i < nrows * 2; i++)
       {
-	      mpq_init(lpi->irhs[i]);
-	      mpq_init(lpi->irng[i]);
+         mpq_init(lpi->irhs[i]);
+         mpq_init(lpi->irng[i]);
       }
       lpi->rowspace = nrows * 2;
    }
@@ -316,8 +316,8 @@ static inline
 SCIP_RETCODE convertSides(
    SCIP_LPIEXACT* const  lpi,
    int const             nrows,
-   SCIP_Rational**       lhs,
-   SCIP_Rational**       rhs
+   SCIP_RATIONAL**       lhs,
+   SCIP_RATIONAL**       rhs
    )
 {  /*lint --e{663, 550, 438, 528}*/
    int state;
@@ -330,8 +330,8 @@ SCIP_RETCODE convertSides(
       int state1;
       int state2;
 
-      lhsg = RatGetGMP(lhs[i]);
-      rhsg = RatGetGMP(rhs[i]);
+      lhsg = SCIPrationalGetGMP(lhs[i]);
+      rhsg = SCIPrationalGetGMP(rhs[i]);
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
       state1 = ((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U);
       state2 = ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U);
@@ -341,13 +341,13 @@ SCIP_RETCODE convertSides(
       state2 = 0;
       state = 0;
 #endif
-      //state = (((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U) | ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U));
+      /* state = (((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U) | ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U)); */
       lpi->ircnt[i] = 0;
       lpi->irbeg[i] = 0;
       switch( state )
       {
       case 0:
-         if( RatIsEqual(lhs[i], rhs[i]) )
+         if( SCIPrationalIsEqual(lhs[i], rhs[i]) )
          {
             lpi->isen[i] = 'E';
             mpq_set(lpi->irhs[i], *lhsg);
@@ -534,7 +534,7 @@ SCIP_RETCODE SCIPlpiExactCreate(
 
 /** deletes an LP problem object */
 SCIP_RETCODE SCIPlpiExactFree(
-   SCIP_LPIEXACT**         lpi               /**< pointer to an LP interface structure */
+   SCIP_LPIEXACT**       lpi                 /**< pointer to an LP interface structure */
    )
 {
    register int i;
@@ -591,18 +591,18 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    SCIP_OBJSEN           objsen,             /**< objective sense */
    int                   ncols,              /**< number of columns */
-   SCIP_Rational**       obj,                /**< objective function values of columns */
-   SCIP_Rational**       lb,                 /**< lower bounds of columns */
-   SCIP_Rational**       ub,                 /**< upper bounds of columns */
+   SCIP_RATIONAL**       obj,                /**< objective function values of columns */
+   SCIP_RATIONAL**       lb,                 /**< lower bounds of columns */
+   SCIP_RATIONAL**       ub,                 /**< upper bounds of columns */
    char**                colnames,           /**< column names, or NULL */
    int                   nrows,              /**< number of rows */
-   SCIP_Rational**       lhs,                /**< left hand sides of rows */
-   SCIP_Rational**       rhs,                /**< right hand sides of rows */
+   SCIP_RATIONAL**       lhs,                /**< left hand sides of rows */
+   SCIP_RATIONAL**       rhs,                /**< right hand sides of rows */
    char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
    int*                  beg,                /**< start index of each column in ind- and val-array */
    int*                  ind,                /**< row indices of constraint matrix entries */
-   SCIP_Rational**       val                 /**< values of constraint matrix entries */
+   SCIP_RATIONAL**       val                 /**< values of constraint matrix entries */
    )
 {
    int rval = 0;
@@ -644,19 +644,18 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
    QS_RETURN(rval);
 }
 
-/** @todo exip: check whether I implemented handling of case beg=ind=val=NULL correctly */
 /** adds columns to the LP */
 SCIP_RETCODE SCIPlpiExactAddCols(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to be added */
-   SCIP_Rational**       obj,                /**< objective function values of new columns */
-   SCIP_Rational**       lb,                 /**< lower bounds of new columns */
-   SCIP_Rational**       ub,                 /**< upper bounds of new columns */
+   SCIP_RATIONAL**       obj,                /**< objective function values of new columns */
+   SCIP_RATIONAL**       lb,                 /**< lower bounds of new columns */
+   SCIP_RATIONAL**       ub,                 /**< upper bounds of new columns */
    char**                colnames,           /**< column names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    int*                  beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
    int*                  ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
-   SCIP_Rational**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   SCIP_RATIONAL**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
    mpq_t* valgmp;
@@ -688,23 +687,23 @@ SCIP_RETCODE SCIPlpiExactAddCols(
       }
 
       SCIP_ALLOC( BMSallocMemoryArray(&valgmp, nnonz) );
-      RatSetGMPArray(valgmp, val, nnonz);
+      SCIPrationalSetGMPArray(valgmp, val, nnonz);
 
       /* and add the columns */
       for( i = 0; i < ncols; ++i )
       {
          mpq_QSadd_col(lpi->prob, lpi->iccnt[i], &ind[beg[i]], &(valgmp[beg[i]]),
-            *RatGetGMP(obj[i]), *RatGetGMP(lb[i]), *RatGetGMP(ub[i]), (const char*) colnames[i]);
+            *SCIPrationalGetGMP(obj[i]), *SCIPrationalGetGMP(lb[i]), *SCIPrationalGetGMP(ub[i]), (const char*) colnames[i]);
       }
 
-      RatClearGMPArray(valgmp, nnonz);
+      SCIPrationalClearArrayGMP(valgmp, nnonz);
       BMSfreeMemoryArray(&valgmp);
    }
    else
    {
       for( i = 0; i < ncols; ++i )
       {
-         rval = mpq_QSnew_col(lpi->prob, *RatGetGMP(obj[i]), *RatGetGMP(lb[i]), *RatGetGMP(ub[i]), (const char*) colnames[i]);
+         rval = mpq_QSnew_col(lpi->prob, *SCIPrationalGetGMP(obj[i]), *SCIPrationalGetGMP(lb[i]), *SCIPrationalGetGMP(ub[i]), (const char*) colnames[i]);
       }
    }
 
@@ -730,7 +729,7 @@ SCIP_RETCODE SCIPlpiExactDelCols(
 
    SCIPdebugMessage("deleting %d columns from QSopt_ex\n", len);
 
-   SCIP_CALL(ensureColMem(lpi, len));
+   SCIP_CALL( ensureColMem(lpi, len) );
    for( i = firstcol ; i <= lastcol ; i++ )
       lpi->iccnt[i-firstcol] = i;
 
@@ -764,9 +763,9 @@ SCIP_RETCODE SCIPlpiExactDelColset(
    for( i = 0, ccnt = 0; i < ncols; i++ )
    {
       if( dstat[i] )
-	      dstat[i] = -1;
+         dstat[i] = -1;
       else
-	      dstat[i] = ccnt++;
+         dstat[i] = ccnt++;
    }
    return SCIP_OKAY;
 }
@@ -776,13 +775,13 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPlpiExactAddRows(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows to be added */
-   SCIP_Rational**       lhs,                /**< left hand sides of new rows */
-   SCIP_Rational**       rhs,                /**< right hand sides of new rows */
+   SCIP_RATIONAL**       lhs,                /**< left hand sides of new rows */
+   SCIP_RATIONAL**       rhs,                /**< right hand sides of new rows */
    char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    int*                  beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
    int*                  ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
-   SCIP_Rational**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   SCIP_RATIONAL**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
    register int i;
@@ -814,12 +813,13 @@ SCIP_RETCODE SCIPlpiExactAddRows(
    }
 
    SCIP_ALLOC( BMSallocMemoryArray(&valgmp, nnonz) );
-   RatSetGMPArray(valgmp, val, nnonz);
+   SCIPrationalSetGMPArray(valgmp, val, nnonz);
 
-   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, (const mpq_t*) valgmp, (const mpq_t*) lpi->irhs, lpi->isen, (const mpq_t*) lpi->irng, (const char**) rownames);
+   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, (const mpq_t*) valgmp, (const mpq_t*) lpi->irhs,
+      lpi->isen, (const mpq_t*) lpi->irng, (const char**) rownames);
    QS_CONDRET(rval);
 
-   RatClearGMPArray(valgmp, nnonz);
+   SCIPrationalClearArrayGMP(valgmp, nnonz);
    BMSfreeMemoryArray(&valgmp);
 
    return SCIP_OKAY;
@@ -874,7 +874,7 @@ SCIP_RETCODE SCIPlpiExactDelRowset(
    for( i = 0; i < nrows; ++i )
    {
       if( dstat[i] == 1 )
-	      ndel++;
+         ndel++;
    }
 
    SCIPdebugMessage("deleting a row set from QSopt_ex (%d)\n",ndel);
@@ -885,9 +885,9 @@ SCIP_RETCODE SCIPlpiExactDelRowset(
    for( i = 0, ccnt = 0; i < nrows; ++i )
    {
       if( dstat[i] )
-	      dstat[i] = -1;
+         dstat[i] = -1;
       else
-	      dstat[i] = ccnt++;
+         dstat[i] = ccnt++;
    }
    return SCIP_OKAY;
 }
@@ -912,7 +912,7 @@ SCIP_RETCODE SCIPlpiExactClear(
    {
       SCIP_CALL( ensureColMem(lpi,ncols) );
       for (i = 0; i < ncols; ++i)
-	      lpi->iccnt[i] = i;
+         lpi->iccnt[i] = i;
       rval = mpq_QSdelete_cols(lpi->prob, ncols, lpi->iccnt);
       QS_CONDRET(rval);
    }
@@ -921,7 +921,7 @@ SCIP_RETCODE SCIPlpiExactClear(
    {
       SCIP_CALL( ensureRowMem(lpi, nrows) );
       for (i = 0; i < nrows; ++i)
-	      lpi->ircnt[i] = i;
+         lpi->ircnt[i] = i;
       rval = mpq_QSdelete_rows(lpi->prob, nrows, lpi->ircnt);
       QS_CONDRET(rval);
    }
@@ -934,8 +934,8 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
    int*                  ind,                /**< column indices */
-   SCIP_Rational**       lb,                 /**< values for the new lower bounds, or NULL */
-   SCIP_Rational**       ub                  /**< values for the new upper bounds, or NULL */
+   SCIP_RATIONAL**       lb,                 /**< values for the new lower bounds, or NULL */
+   SCIP_RATIONAL**       ub                  /**< values for the new upper bounds, or NULL */
    )
 {
    register int i;
@@ -956,11 +956,11 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
       for( j = 0; j < ncols; ++j )
       {
          if( lb == NULL)
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [--,%Qd]\n", ind[j], *RatGetGMP(ub[j]));
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [--,%Qd]\n", ind[j], *SCIPrationalGetGMP(ub[j]));
          else if( ub == NULL )
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,--]\n", ind[j], *RatGetGMP(lb[j]));
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,--]\n", ind[j], *SCIPrationalGetGMP(lb[j]));
          else
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,%Qd]\n", ind[j], *RatGetGMP(lb[j]), *RatGetGMP(ub[j]));
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,%Qd]\n", ind[j], *SCIPrationalGetGMP(lb[j]), *SCIPrationalGetGMP(ub[j]));
          SCIPdebugPrintf(s);
       }
    }
@@ -973,7 +973,7 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
       for( i = 0; i < ncols; i++ )
       {
          lpi->iccha[i] = 'L';
-         rval = mpq_QSchange_bound(lpi->prob, ind[i], lpi->iccha[i], *RatGetGMP(lb[i]));
+         rval = mpq_QSchange_bound(lpi->prob, ind[i], lpi->iccha[i], *SCIPrationalGetGMP(lb[i]));
          QS_CONDRET(rval);
       }
    }
@@ -983,7 +983,7 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
       for( i = 0; i < ncols; i++ )
       {
          lpi->iccha[i] = 'U';
-         rval = mpq_QSchange_bound(lpi->prob, ind[i], lpi->iccha[i], *RatGetGMP(ub[i]));
+         rval = mpq_QSchange_bound(lpi->prob, ind[i], lpi->iccha[i], *SCIPrationalGetGMP(ub[i]));
          QS_CONDRET(rval);
       }
    }
@@ -995,8 +995,8 @@ SCIP_RETCODE SCIPlpiExactChgSides(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   nrows,              /**< number of rows to change sides for */
    int*                  ind,                /**< row indices */
-   SCIP_Rational**       lhs,                /**< new values for left hand sides */
-   SCIP_Rational**       rhs                 /**< new values for right hand sides */
+   SCIP_RATIONAL**       lhs,                /**< new values for left hand sides */
+   SCIP_RATIONAL**       rhs                 /**< new values for right hand sides */
    )
 {
    register int i;
@@ -1024,8 +1024,8 @@ SCIP_RETCODE SCIPlpiExactChgSides(
 
       if (lpi->isen[i] == 'R')
       {
-	      rval = mpq_QSchange_range(lpi->prob, ind[i], lpi->irng[i]);
-	      QS_CONDRET(rval);
+         rval = mpq_QSchange_range(lpi->prob, ind[i], lpi->irng[i]);
+         QS_CONDRET(rval);
       }
    }
 
@@ -1037,7 +1037,7 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number of coefficient to change */
    int                   col,                /**< column number of coefficient to change */
-   SCIP_Rational*        newval              /**< new value of coefficient */
+   SCIP_RATIONAL*        newval              /**< new value of coefficient */
    )
 {
    int rval = 0;
@@ -1047,9 +1047,9 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
 
    lpi->solstat = 0;
 
-   SCIPdebugMessage("changing coefficient row %d, column %d in QSopt_ex to %g\n", row, col, RatApproxReal(newval));
+   SCIPdebugMessage("changing coefficient row %d, column %d in QSopt_ex to %g\n", row, col, SCIPrationalGetReal(newval));
 
-   rval = mpq_QSchange_coef(lpi->prob, row, col, *RatGetGMP(newval));
+   rval = mpq_QSchange_coef(lpi->prob, row, col, *SCIPrationalGetGMP(newval));
 
    QS_RETURN(rval);
 }
@@ -1088,7 +1088,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
    int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Rational**       obj                 /**< new objective values for columns */
+   SCIP_RATIONAL**       obj                 /**< new objective values for columns */
    )
 {
    register int i;
@@ -1102,7 +1102,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
 
    for( i = 0; i < ncols; ++i )
    {
-      rval = mpq_QSchange_objcoef(lpi->prob, ind[i], *RatGetGMP(obj[i]));
+      rval = mpq_QSchange_objcoef(lpi->prob, ind[i], *SCIPrationalGetGMP(obj[i]));
       QS_CONDRET(rval);
    }
    QS_RETURN(rval);
@@ -1112,7 +1112,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
 SCIP_RETCODE SCIPlpiExactScaleRow(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number to scale */
-   SCIP_Rational*        scaleval            /**< scaling multiplier */
+   SCIP_RATIONAL*        scaleval            /**< scaling multiplier */
    )
 {
    register int i;
@@ -1128,7 +1128,7 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
 
    mpq_init(svl);
    lpi->solstat = 0;
-   RatDebugMessage("scaling row %d with factor %g in QSopt_ex\n", row, scaleval);
+   SCIPrationalDebugMessage("scaling row %d with factor %g in QSopt_ex\n", row, scaleval);
 
    rowlist[0] = row;
    /* get row */
@@ -1138,20 +1138,20 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
    /* change all coefficients in the constraint */
    for( i = 0; i < rowcnt[0]; ++i )
    {
-      mpq_mul(svl, rowval[i], *RatGetGMP(scaleval));
+      mpq_mul(svl, rowval[i], *SCIPrationalGetGMP(scaleval));
       rval = mpq_QSchange_coef(lpi->prob, row, rowind[i], svl);
       QS_TESTG(rval, CLEANUP, " ");
    }
 
    /* if we have a positive scalar, we just scale rhs and range */
-   if( RatGetSign(scaleval) >= 0 )
+   if( SCIPrationalGetSign(scaleval) >= 0 )
    {
-      mpq_mul(svl, *RatGetGMP(scaleval), rhs[0]);
+      mpq_mul(svl, *SCIPrationalGetGMP(scaleval), rhs[0]);
       rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
       QS_TESTG(rval, CLEANUP, " ");
       if (sense[0] == 'R')
       {
-	 mpq_mul(svl, range[0], *RatGetGMP(scaleval));
+	 mpq_mul(svl, range[0], *SCIPrationalGetGMP(scaleval));
 	 rval = mpq_QSchange_range(lpi->prob, row, svl);
 	 QS_TESTG(rval, CLEANUP, " ");
       }
@@ -1162,19 +1162,19 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
       switch( sense[0] )
       {
       case 'E':
-         mpq_mul(svl, rhs[0], *RatGetGMP(scaleval));
+         mpq_mul(svl, rhs[0], *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
          break;
       case 'L':
-         mpq_mul(svl, rhs[0], *RatGetGMP(scaleval));
+         mpq_mul(svl, rhs[0], *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
          rval = mpq_QSchange_sense(lpi->prob, row, 'G');
          QS_TESTG(rval, CLEANUP, " ");
 	      break;
       case 'G':
-         mpq_mul(svl, rhs[0], *RatGetGMP(scaleval));
+         mpq_mul(svl, rhs[0], *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
          rval = mpq_QSchange_sense(lpi->prob, row, 'L');
@@ -1182,10 +1182,10 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
          break;
       case 'R':
          mpq_add(svl, rhs[0], range[0]);
-         mpq_mul(svl, svl, *RatGetGMP(scaleval));
+         mpq_mul(svl, svl, *SCIPrationalGetGMP(scaleval));
          rval = mpq_QSchange_rhscoef(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
-         mpq_abs(svl,*RatGetGMP(scaleval));
+         mpq_abs(svl,*SCIPrationalGetGMP(scaleval));
          mpq_mul(svl, svl, range[0]);
          rval = mpq_QSchange_range(lpi->prob, row, svl);
          QS_TESTG(rval, CLEANUP, " ");
@@ -1217,7 +1217,7 @@ SCIP_RETCODE SCIPlpiExactScaleRow(
 SCIP_RETCODE SCIPlpiExactScaleCol(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   col,                /**< column number to scale */
-   SCIP_Rational*        scaleval            /**< scaling multiplier */
+   SCIP_RATIONAL*        scaleval            /**< scaling multiplier */
    )
 {
    register int i;
@@ -1233,7 +1233,7 @@ SCIP_RETCODE SCIPlpiExactScaleCol(
    mpq_init(svl);
    lpi->solstat = 0;
    SCIPdebugMessage("scaling column %d with factor %g in QSopt_ex\n",
-      col, RatApproxReal(scaleval));
+      col, SCIPrationalGetReal(scaleval));
 
    /* get the column */
    collist[0] = col;
@@ -1243,18 +1243,18 @@ SCIP_RETCODE SCIPlpiExactScaleCol(
    /* scale column coefficients */
    for( i = 0; i < colcnt[0]; ++i )
    {
-      mpq_mul(svl, colval[i], *RatGetGMP(scaleval));
+      mpq_mul(svl, colval[i], *SCIPrationalGetGMP(scaleval));
       rval = mpq_QSchange_coef(lpi->prob, colind[i], col, svl);
       QS_TESTG(rval,CLEANUP," ");
    }
 
    /* scale objective value */
-   mpq_mul(svl, obj[0], *RatGetGMP(scaleval));
+   mpq_mul(svl, obj[0], *SCIPrationalGetGMP(scaleval));
    rval = mpq_QSchange_objcoef(lpi->prob, col, svl);
    QS_TESTG(rval,CLEANUP," ");
 
    /* scale column bounds */
-   if( mpq_sgn(*RatGetGMP(scaleval)) < 0 )
+   if( mpq_sgn(*SCIPrationalGetGMP(scaleval)) < 0 )
    {
       mpq_set(obj[0], lb[0]);
       mpq_neg(lb[0], ub[0]);
@@ -1262,12 +1262,12 @@ SCIP_RETCODE SCIPlpiExactScaleCol(
    }
    if( mpq_cmp(lb[0],mpq_ILL_MINDOUBLE) > 0 )
    {
-      mpq_abs(svl,*RatGetGMP(scaleval));
+      mpq_abs(svl,*SCIPrationalGetGMP(scaleval));
       mpq_mul(lb[0], lb[0], svl);
    }
    if( mpq_cmp(ub[0], mpq_ILL_MAXDOUBLE) < 0 )
    {
-      mpq_abs(svl, *RatGetGMP(scaleval));
+      mpq_abs(svl, *SCIPrationalGetGMP(scaleval));
       mpq_mul(ub[0], ub[0], svl);
    }
 
@@ -1361,12 +1361,12 @@ SCIP_RETCODE SCIPlpiExactGetCols(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get from LP */
    int                   lastcol,            /**< last column to get from LP */
-   SCIP_Rational**       lb,                 /**< buffer to store the lower bound vector, or NULL */
-   SCIP_Rational**       ub,                 /**< buffer to store the upper bound vector, or NULL */
+   SCIP_RATIONAL**       lb,                 /**< buffer to store the lower bound vector, or NULL */
+   SCIP_RATIONAL**       ub,                 /**< buffer to store the upper bound vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each column in ind- and val-array, or NULL */
    int*                  ind,                /**< buffer to store column indices of constraint matrix entries, or NULL */
-   SCIP_Rational**       val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   SCIP_RATIONAL**       val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
    int len;
@@ -1409,11 +1409,11 @@ SCIP_RETCODE SCIPlpiExactGetCols(
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len ; i++ )
-	      beg[i] = lbeg[i];  /*lint !e613*/
+         beg[i] = lbeg[i];  /*lint !e613*/
       for( i = 0; i < *nnonz; ++i )
       {
-	      ind[i] = lind[i];  /*lint !e613*/
-         RatSetGMP(val[i], lval[i]);
+         ind[i] = lind[i];  /*lint !e613*/
+         SCIPrationalSetGMP(val[i], lval[i]);
       }
    }
    if( lb )
@@ -1423,8 +1423,8 @@ SCIP_RETCODE SCIPlpiExactGetCols(
 
       for( i = 0; i < len; ++i )
       {
-         RatSetGMP(lb[i], llb[i]);
-         RatSetGMP(ub[i], lub[i]);   /*lint !e613*/
+         SCIPrationalSetGMP(lb[i], llb[i]);
+         SCIPrationalSetGMP(ub[i], lub[i]);   /*lint !e613*/
       }
    }
 
@@ -1447,12 +1447,12 @@ SCIP_RETCODE SCIPlpiExactGetRows(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get from LP */
    int                   lastrow,            /**< last row to get from LP */
-   SCIP_Rational**       lhs,                /**< buffer to store left hand side vector, or NULL */
-   SCIP_Rational**       rhs,                /**< buffer to store right hand side vector, or NULL */
+   SCIP_RATIONAL**       lhs,                /**< buffer to store left hand side vector, or NULL */
+   SCIP_RATIONAL**       rhs,                /**< buffer to store right hand side vector, or NULL */
    int*                  nnonz,              /**< pointer to store the number of nonzero elements returned, or NULL */
    int*                  beg,                /**< buffer to store start index of each row in ind- and val-array, or NULL */
    int*                  ind,                /**< buffer to store row indices of constraint matrix entries, or NULL */
-   SCIP_Rational**       val                 /**< buffer to store values of constraint matrix entries, or NULL */
+   SCIP_RATIONAL**       val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
    const int len = lastrow - firstrow + 1;
@@ -1494,11 +1494,11 @@ SCIP_RETCODE SCIPlpiExactGetRows(
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0; i < len; i++ )
-	      beg[i] = lbeg[i];  /*lint !e613*/
+         beg[i] = lbeg[i];  /*lint !e613*/
       for( i = 0; i < *nnonz; ++i )
       {
-	      ind[i] = lind[i];  /*lint !e613*/
-	      RatSetGMP(val[i], lval[i]);  /*lint !e613*/
+         ind[i] = lind[i];  /*lint !e613*/
+         SCIPrationalSetGMP(val[i], lval[i]);  /*lint !e613*/
       }
    }
    if( rhs )
@@ -1512,21 +1512,21 @@ SCIP_RETCODE SCIPlpiExactGetRows(
          switch( lsense[i] )
          {
          case 'R':
-            RatSetGMP(lhs[i], lrhs[i]);
-            RatSetGMP(rhs[i], lrng[i]);
-            RatAdd(rhs[i], rhs[i], lhs[i]);
+            SCIPrationalSetGMP(lhs[i], lrhs[i]);
+            SCIPrationalSetGMP(rhs[i], lrng[i]);
+            SCIPrationalAdd(rhs[i], rhs[i], lhs[i]);
             break;
          case 'E':
-            RatSetGMP(lhs[i], lrhs[i]);
-            RatSetGMP(rhs[i], lrhs[i]);
+            SCIPrationalSetGMP(lhs[i], lrhs[i]);
+            SCIPrationalSetGMP(rhs[i], lrhs[i]);
             break;
          case 'L':
-            RatSetGMP(rhs[i], lrhs[i]);
-            RatSetGMP(lhs[i], mpq_ILL_MINDOUBLE);      /*lint !e613*/
+            SCIPrationalSetGMP(rhs[i], lrhs[i]);
+            SCIPrationalSetGMP(lhs[i], mpq_ILL_MINDOUBLE);      /*lint !e613*/
             break;
          case 'G':
-            RatSetGMP(lhs[i], lrhs[i]);
-            RatSetGMP(rhs[i], mpq_ILL_MAXDOUBLE);
+            SCIPrationalSetGMP(lhs[i], lrhs[i]);
+            SCIPrationalSetGMP(rhs[i], mpq_ILL_MAXDOUBLE);
             break;
          default:
             SCIPerrorMessage("Unknown sense %c from QSopt_ex", lsense[i]);
@@ -1552,7 +1552,7 @@ SCIP_RETCODE SCIPlpiExactGetObj(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get objective coefficient for */
    int                   lastcol,            /**< last column to get objective coefficient for */
-   SCIP_Rational**       vals                /**< array to store objective coefficients */
+   SCIP_RATIONAL**       vals                /**< array to store objective coefficients */
    )
 {
    const int len = lastcol - firstcol + 1;
@@ -1572,12 +1572,12 @@ SCIP_RETCODE SCIPlpiExactGetObj(
       lpi->iccnt[i] = i + firstcol;
 
    SCIP_ALLOC( BMSallocMemoryArray(&valgmp, len) );
-   RatSetGMPArray(valgmp, vals, len);
+   SCIPrationalSetGMPArray(valgmp, vals, len);
    /* get data from qsopt */
    rval = mpq_QSget_obj_list(lpi->prob, len, lpi->iccnt, valgmp);
-   RatSetArrayGMP(vals, valgmp, len);
+   SCIPrationalSetArrayGMP(vals, valgmp, len);
 
-   RatClearGMPArray(valgmp, len);
+   SCIPrationalClearArrayGMP(valgmp, len);
    BMSfreeMemoryArray(&valgmp);
 
    QS_RETURN(rval);
@@ -1588,8 +1588,8 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstcol,           /**< first column to get objective value for */
    int                   lastcol,            /**< last column to get objective value for */
-   SCIP_Rational**       lbs,                /**< array to store lower bound values, or NULL */
-   SCIP_Rational**       ubs                 /**< array to store upper bound values, or NULL */
+   SCIP_RATIONAL**       lbs,                /**< array to store lower bound values, or NULL */
+   SCIP_RATIONAL**       ubs                 /**< array to store upper bound values, or NULL */
    )
 {
    const int len = lastcol - firstcol + 1;
@@ -1603,20 +1603,20 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
    SCIPdebugMessage("getting bound values %d to %d\n", firstcol, lastcol);
 
    /* build col-list */
-   SCIP_CALL(ensureColMem(lpi,len));
+   SCIP_CALL( ensureColMem(lpi,len) );
    for( i = 0; i < len; ++i )
    {
       if( lbs != NULL )
       {
-         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'L', RatGetGMP(lbs[i])) );
-         RatCheckInfByValue(lbs[i]);
-         RatResetFloatingPointRepresentable(lbs[i]);
+         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'L', SCIPrationalGetGMP(lbs[i])) );
+         SCIPrationalCheckInfByValue(lbs[i]);
+         SCIPrationalResetFloatingPointRepresentable(lbs[i]);
       }
       if( ubs != NULL )
       {
-         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'U', RatGetGMP(ubs[i])) );
-         RatCheckInfByValue(ubs[i]);
-         RatResetFloatingPointRepresentable(ubs[i]);
+         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'U', SCIPrationalGetGMP(ubs[i])) );
+         SCIPrationalCheckInfByValue(ubs[i]);
+         SCIPrationalResetFloatingPointRepresentable(ubs[i]);
       }
    }
 
@@ -1628,13 +1628,14 @@ SCIP_RETCODE SCIPlpiExactGetSides(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   firstrow,           /**< first row to get sides for */
    int                   lastrow,            /**< last row to get sides for */
-   SCIP_Rational**       lhss,               /**< array to store left hand side values, or NULL */
-   SCIP_Rational**       rhss                /**< array to store right hand side values, or NULL */
+   SCIP_RATIONAL**       lhss,               /**< array to store left hand side values, or NULL */
+   SCIP_RATIONAL**       rhss                /**< array to store right hand side values, or NULL */
    )
 {
    const int len = lastrow - firstrow + 1;
    register int i;
-   mpq_t* lrhs=0, *lrng=0;
+   mpq_t* lrhs = 0;
+   mpq_t* lrng = 0;
    int rval = 0;
    char* lsense=0;
 
@@ -1660,21 +1661,21 @@ SCIP_RETCODE SCIPlpiExactGetSides(
       switch (lsense[i])
       {
       case 'R':
-         RatSetGMP(lhss[i], lrhs[i]);
-         RatSetGMP(rhss[i], lrng[i]);
-         RatAdd(rhss[i], rhss[i], lhss[i]);
+         SCIPrationalSetGMP(lhss[i], lrhs[i]);
+         SCIPrationalSetGMP(rhss[i], lrng[i]);
+         SCIPrationalAdd(rhss[i], rhss[i], lhss[i]);
          break;
       case 'E':
-         RatSetGMP(lhss[i], lrhs[i]);
-         RatSetGMP(rhss[i], lrhs[i]);
+         SCIPrationalSetGMP(lhss[i], lrhs[i]);
+         SCIPrationalSetGMP(rhss[i], lrhs[i]);
          break;
       case 'L':
-         RatSetGMP(rhss[i], lrhs[i]);
-         RatSetGMP(lhss[i], mpq_ILL_MINDOUBLE);
+         SCIPrationalSetGMP(rhss[i], lrhs[i]);
+         SCIPrationalSetGMP(lhss[i], mpq_ILL_MINDOUBLE);
          break;
       case 'G':
-         RatSetGMP(lhss[i], lrhs[i]);
-         RatSetGMP(rhss[i], mpq_ILL_MAXDOUBLE);
+         SCIPrationalSetGMP(lhss[i], lrhs[i]);
+         SCIPrationalSetGMP(rhss[i], mpq_ILL_MAXDOUBLE);
          break;
       default:
          SCIPerrorMessage("Unknown sense %c from QSopt_ex", lsense[i]);
@@ -1698,7 +1699,7 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    int                   row,                /**< row number of coefficient */
    int                   col,                /**< column number of coefficient */
-   SCIP_Rational*        val                 /**< pointer to store the value of the coefficient */
+   SCIP_RATIONAL*        val                 /**< pointer to store the value of the coefficient */
    )
 {
    int rval = 0;
@@ -1708,9 +1709,9 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
 
    SCIPdebugMessage("getting coefficient of row %d col %d\n", row, col);
 
-   rval = mpq_QSget_coef(lpi->prob, row, col, RatGetGMP(val));
-   RatCheckInfByValue(val);
-   RatResetFloatingPointRepresentable(val);
+   rval = mpq_QSget_coef(lpi->prob, row, col, SCIPrationalGetGMP(val));
+   SCIPrationalCheckInfByValue(val);
+   SCIPrationalResetFloatingPointRepresentable(val);
 
    QS_RETURN(rval);
 }
@@ -2073,7 +2074,7 @@ SCIP_RETCODE SCIPlpiExactIgnoreInstability(
 /** gets objective value of solution */
 SCIP_RETCODE SCIPlpiExactGetObjval(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational*        objval              /**< stores the objective value */
+   SCIP_RATIONAL*        objval              /**< stores the objective value */
    )
 {
    int rval = 0;
@@ -2083,9 +2084,9 @@ SCIP_RETCODE SCIPlpiExactGetObjval(
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   rval = mpq_QSget_objval(lpi->prob, RatGetGMP(objval));
-   RatCheckInfByValue(objval);
-   RatResetFloatingPointRepresentable(objval);
+   rval = mpq_QSget_objval(lpi->prob, SCIPrationalGetGMP(objval));
+   SCIPrationalCheckInfByValue(objval);
+   SCIPrationalResetFloatingPointRepresentable(objval);
 
    QS_RETURN(rval);
 }
@@ -2093,11 +2094,11 @@ SCIP_RETCODE SCIPlpiExactGetObjval(
 /** gets primal and dual solution vectors */
 SCIP_RETCODE SCIPlpiExactGetSol(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational*        objval,             /**< stores the objective value, may be NULL if not needed */
-   SCIP_Rational**       primsol,            /**< primal solution vector, may be NULL if not needed */
-   SCIP_Rational**       dualsol,            /**< dual solution vector, may be NULL if not needed */
-   SCIP_Rational**       activity,           /**< row activity vector, may be NULL if not needed */
-   SCIP_Rational**       redcost             /**< reduced cost vector, may be NULL if not needed */
+   SCIP_RATIONAL*        objval,             /**< stores the objective value, may be NULL if not needed */
+   SCIP_RATIONAL**       primsol,            /**< primal solution vector, may be NULL if not needed */
+   SCIP_RATIONAL**       dualsol,            /**< dual solution vector, may be NULL if not needed */
+   SCIP_RATIONAL**       activity,           /**< row activity vector, may be NULL if not needed */
+   SCIP_RATIONAL**       redcost             /**< reduced cost vector, may be NULL if not needed */
    )
 {
    int rval = 0, nrows, ncols;
@@ -2118,26 +2119,26 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    else
    {
       SCIP_ALLOC( BMSallocMemoryArray(&primsolgmp, ncols) );
-      RatSetGMPArray(primsolgmp, primsol, ncols);
+      SCIPrationalSetGMPArray(primsolgmp, primsol, ncols);
    }
    if( redcost == NULL )
       redcostgmp = NULL;
    else
    {
       SCIP_ALLOC( BMSallocMemoryArray(&redcostgmp, ncols) );
-      RatSetGMPArray(redcostgmp, redcost, ncols);
+      SCIPrationalSetGMPArray(redcostgmp, redcost, ncols);
    }
    if( dualsol == NULL )
       dualsolgmp = NULL;
    else
    {
       SCIP_ALLOC( BMSallocMemoryArray(&dualsolgmp, nrows) );
-      RatSetGMPArray(dualsolgmp, dualsol, nrows);
+      SCIPrationalSetGMPArray(dualsolgmp, dualsol, nrows);
    }
    if( objval != NULL )
    {
-      objvalgmp = RatGetGMP(objval);
-      RatResetFloatingPointRepresentable(objval);
+      objvalgmp = SCIPrationalGetGMP(objval);
+      SCIPrationalResetFloatingPointRepresentable(objval);
    }
    else
       objvalgmp = NULL;
@@ -2145,24 +2146,24 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    rval = mpq_QSget_solution(lpi->prob, objvalgmp, primsolgmp, dualsolgmp, lpi->irng, redcostgmp);
 
    if( objval != NULL )
-      RatCheckInfByValue(objval);
+      SCIPrationalCheckInfByValue(objval);
 
    if( redcost != NULL )
    {
-      RatSetArrayGMP(redcost, redcostgmp, ncols);
-      RatClearGMPArray(redcostgmp, ncols);
+      SCIPrationalSetArrayGMP(redcost, redcostgmp, ncols);
+      SCIPrationalClearArrayGMP(redcostgmp, ncols);
       BMSfreeMemoryArray(&redcostgmp);
    }
    if( primsol != NULL )
    {
-      RatSetArrayGMP(primsol, primsolgmp, ncols);
-      RatClearGMPArray(primsolgmp, ncols);
+      SCIPrationalSetArrayGMP(primsol, primsolgmp, ncols);
+      SCIPrationalClearArrayGMP(primsolgmp, ncols);
       BMSfreeMemoryArray(&primsolgmp);
    }
    if( dualsol != NULL )
    {
-      RatSetArrayGMP(dualsol, dualsolgmp, nrows);
-      RatClearGMPArray(dualsolgmp, nrows);
+      SCIPrationalSetArrayGMP(dualsol, dualsolgmp, nrows);
+      SCIPrationalClearArrayGMP(dualsolgmp, nrows);
       BMSfreeMemoryArray(&dualsolgmp);
    }
 
@@ -2183,14 +2184,14 @@ SCIP_RETCODE SCIPlpiExactGetSol(
          case 'R':
          case 'E':
          case 'G':
-            mpq_add(*RatGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
-            RatResetFloatingPointRepresentable(activity[i]);
-            RatCheckInfByValue(activity[i]);
+            mpq_add(*SCIPrationalGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
+            SCIPrationalResetFloatingPointRepresentable(activity[i]);
+            SCIPrationalCheckInfByValue(activity[i]);
             break;
          case 'L':
-            mpq_sub(*RatGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
-            RatResetFloatingPointRepresentable(activity[i]);
-            RatCheckInfByValue(activity[i]);
+            mpq_sub(*SCIPrationalGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
+            SCIPrationalResetFloatingPointRepresentable(activity[i]);
+            SCIPrationalCheckInfByValue(activity[i]);
             break;
          default:
             SCIPerrorMessage("unknown sense %c\n", lpi->isen[i]);
@@ -2205,7 +2206,7 @@ SCIP_RETCODE SCIPlpiExactGetSol(
 /** gets primal ray for unbounded LPs */
 SCIP_RETCODE SCIPlpiExactGetPrimalRay(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational**       ray                 /**< primal ray */
+   SCIP_RATIONAL**       ray                 /**< primal ray */
    )
 {  /*lint --e{715}*/
    assert(lpi != NULL);
@@ -2219,7 +2220,7 @@ SCIP_RETCODE SCIPlpiExactGetPrimalRay(
 /** gets dual farkas proof for infeasibility */
 SCIP_RETCODE SCIPlpiExactGetDualfarkas(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_Rational**       dualfarkas          /**< dual farkas row multipliers */
+   SCIP_RATIONAL**       dualfarkas          /**< dual farkas row multipliers */
    )
 {
    int rval = 0;
@@ -2235,12 +2236,12 @@ SCIP_RETCODE SCIPlpiExactGetDualfarkas(
 
    nrows = mpq_QSget_rowcount(lpi->prob);\
    SCIP_ALLOC( BMSallocMemoryArray(&dualfarkasgmp, nrows) );
-   RatSetGMPArray(dualfarkasgmp, dualfarkas, nrows);
+   SCIPrationalSetGMPArray(dualfarkasgmp, dualfarkas, nrows);
 
    rval = mpq_QSget_infeas_array(lpi->prob, dualfarkasgmp);
 
-   RatSetArrayGMP(dualfarkas, dualfarkasgmp, nrows);
-   RatClearGMPArray(dualfarkasgmp, nrows);
+   SCIPrationalSetArrayGMP(dualfarkas, dualfarkasgmp, nrows);
+   SCIPrationalClearArrayGMP(dualfarkasgmp, nrows);
    BMSfreeMemoryArray(&dualfarkasgmp);
 
    QS_RETURN(rval);
@@ -2295,7 +2296,7 @@ SCIP_RETCODE SCIPlpiExactGetBase(
    ncols = mpq_QSget_colcount(lpi->prob);
    nrows = mpq_QSget_rowcount(lpi->prob);
 
-   SCIP_CALL(ensureTabMem(lpi, nrows + ncols));
+   SCIP_CALL( ensureTabMem(lpi, nrows + ncols) );
 
    icstat = lpi->ibas;
    irstat = lpi->ibas+ncols;
@@ -2364,7 +2365,6 @@ SCIP_RETCODE SCIPlpiExactSetBase(
    ncols = mpq_QSget_colcount(lpi->prob);
    nrows = mpq_QSget_rowcount(lpi->prob);
 
-
    /* allocate enough memory for storing uncompressed basis information */
    SCIP_CALL( ensureColMem(lpi, ncols) );
    SCIP_CALL( ensureRowMem(lpi, nrows) );
@@ -2408,20 +2408,20 @@ SCIP_RETCODE SCIPlpiExactSetBase(
       switch(cstat[i])
       {
       case SCIP_BASESTAT_LOWER:
-	      icstat[i] = QS_COL_BSTAT_LOWER; /*lint !e641*/
-	      break;
+         icstat[i] = QS_COL_BSTAT_LOWER; /*lint !e641*/
+         break;
       case SCIP_BASESTAT_BASIC:
-	      icstat[i] = QS_COL_BSTAT_BASIC; /*lint !e641*/
-	      break;
+         icstat[i] = QS_COL_BSTAT_BASIC; /*lint !e641*/
+         break;
       case SCIP_BASESTAT_UPPER:
-	      icstat[i] = QS_COL_BSTAT_UPPER; /*lint !e641*/
-	      break;
+         icstat[i] = QS_COL_BSTAT_UPPER; /*lint !e641*/
+         break;
       case SCIP_BASESTAT_ZERO:
-	      icstat[i] = QS_COL_BSTAT_FREE; /*lint !e641*/
-	      break;
+         icstat[i] = QS_COL_BSTAT_FREE; /*lint !e641*/
+         break;
       default:
-	      SCIPerrorMessage("Unknown column basic status %d", cstat[i]);
-	      SCIPABORT();
+         SCIPerrorMessage("Unknown column basic status %d", cstat[i]);
+         SCIPABORT();
       }
    }
 
@@ -2453,7 +2453,7 @@ SCIP_RETCODE SCIPlpiExactGetBasisInd(
    for( i = 0; i < nrows; ++i )
    {
       if( bind[i] >= ncols )
-	      bind[i] = -(bind[i] - ncols - 1);
+         bind[i] = -(bind[i] - ncols - 1);
    }
 
    return SCIP_OKAY;
@@ -2475,7 +2475,8 @@ SCIP_RETCODE SCIPlpiExactGetState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {
-   int ncols, nrows;
+   int ncols;
+   int nrows;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2515,8 +2516,11 @@ SCIP_RETCODE SCIPlpiExactSetState(
    )
 {  /*lint --e{715} */
    register int i;
-   int rval = 0, ncols, nrows;
-   char* icstat=0, *irstat=0;
+   int rval = 0;
+   int ncols;
+   int nrows;
+   char* icstat = 0;
+   char* irstat = 0;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2568,10 +2572,10 @@ SCIP_RETCODE SCIPlpiExactSetState(
       {
       case SCIP_BASESTAT_LOWER:
          irstat[i] = QS_ROW_BSTAT_LOWER;
-	      break;
+         break;
       case SCIP_BASESTAT_BASIC:
          irstat[i] = QS_ROW_BSTAT_BASIC;
-	      break;
+         break;
       case SCIP_BASESTAT_UPPER:
          /* sense of inexact LP row is R (ranged row) since this is the only case where the basis status of the
           * slack variable is allowed to be UPPER
@@ -2585,7 +2589,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
              * is an FP relaxation of the exact LP
              */
             irstat[i] = QS_ROW_BSTAT_LOWER;
-	      break;
+         break;
       default:
          SCIPerrorMessage("Unknown row basic status %d", lpi->ircnt[i]);
          SCIPABORT();
@@ -2598,7 +2602,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
       {
       case SCIP_BASESTAT_LOWER:
          icstat[i] = QS_COL_BSTAT_LOWER;
-	      break;
+         break;
       case SCIP_BASESTAT_BASIC:
          icstat[i] = QS_COL_BSTAT_BASIC;
          break;
@@ -2647,8 +2651,8 @@ SCIP_Bool SCIPlpiExactHasStateBasis(
 
 /** reads LP state (like basis information from a file */
 SCIP_RETCODE SCIPlpiExactReadState(
-   SCIP_LPIEXACT*        lpi,               /**< LP interface structure */
-   const char*           fname              /**< file name */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    int rval = 0;
@@ -2670,8 +2674,8 @@ SCIP_RETCODE SCIPlpiExactReadState(
 
 /** writes LP state (like basis information) to a file */
 SCIP_RETCODE SCIPlpiExactWriteState(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   const char*           fname           /**< file name */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   const char*           fname               /**< file name */
    )
 {
    QSbasis* bas = 0;
@@ -2771,9 +2775,9 @@ SCIP_RETCODE SCIPlpiExactGetIntpar(
    case SCIP_LPPAR_SCALING:
       rval = mpq_QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, ival);
       if( *ival )
-	      *ival = TRUE;
+         *ival = TRUE;
       else
-	      *ival = FALSE;
+         *ival = FALSE;
       break;
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;
@@ -2781,9 +2785,9 @@ SCIP_RETCODE SCIPlpiExactGetIntpar(
    case SCIP_LPPAR_LPINFO:
       rval = mpq_QSget_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, ival);
       if( *ival )
-	      *ival = TRUE;
+         *ival = TRUE;
       else
-	      *ival = FALSE;
+         *ival = FALSE;
       break;
    case SCIP_LPPAR_LPITLIM:
       rval = mpq_QSget_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival);
@@ -2843,9 +2847,9 @@ SCIP_RETCODE SCIPlpiExactSetIntpar(
       break;
    case SCIP_LPPAR_LPINFO:
       if( ival == TRUE )
-	      rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 1);
+         rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 1);
       else
-	      rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0);
+         rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0);
       break;
    case SCIP_LPPAR_LPITLIM:
       rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival);
@@ -2920,7 +2924,7 @@ SCIP_RETCODE SCIPlpiExactSetRealpar(
       break;
    case SCIP_LPPAR_OBJLIM:
       rval = mpq_QSset_param_EGlpNum(lpi->prob, QS_PARAM_OBJLLIM, tmpval);
-	 break;
+      break;
    case SCIP_LPPAR_FEASTOL:
    case SCIP_LPPAR_DUALFEASTOL:
    case SCIP_LPPAR_BARRIERCONVTOL:
@@ -2945,42 +2949,42 @@ SCIP_RETCODE SCIPlpiExactSetRealpar(
 
 /** returns value treated as positive infinity in the LP solver */
 void SCIPlpiExactPosInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Rational*        infval          /**< pointer to store positive infinity value of LP solver */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_RATIONAL*        infval              /**< pointer to store positive infinity value of LP solver */
    )
 {
    assert(infval != NULL);
 
-   RatSetGMP(infval, mpq_ILL_MAXDOUBLE);
+   SCIPrationalSetGMP(infval, mpq_ILL_MAXDOUBLE);
 }
 
 /** checks if given value is treated as positive infinity in the LP solver */
 SCIP_Bool SCIPlpiExactIsPosInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Rational*        val             /**< given value */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_RATIONAL*        val                 /**< given value */
    )
 {  /*lint --e{715} */
-   return (mpq_cmp(*RatGetGMP(val), mpq_ILL_MAXDOUBLE) >= 0);
+   return (mpq_cmp(*SCIPrationalGetGMP(val), mpq_ILL_MAXDOUBLE) >= 0);
 }
 
 /** returns value treated as negative infinity in the LP solver */
 void SCIPlpiExactNegInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Rational*        infval          /**< pointer to store negative infinity value of LP solver */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_RATIONAL*        infval              /**< pointer to store negative infinity value of LP solver */
    )
 {  /*lint --e{715} */
    assert(infval != NULL);
 
-   RatSetGMP(infval, mpq_ILL_MINDOUBLE);
+   SCIPrationalSetGMP(infval, mpq_ILL_MINDOUBLE);
 }
 
 /** checks if given value is treated as negative infinity in the LP solver */
 SCIP_Bool SCIPlpiExactIsNegInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Rational*        val             /**< given value */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_RATIONAL*        val                 /**< given value */
    )
 {  /*lint --e{715} */
-   return (mpq_cmp(*RatGetGMP(val), mpq_ILL_MINDOUBLE) <= 0);
+   return (mpq_cmp(*SCIPrationalGetGMP(val), mpq_ILL_MINDOUBLE) <= 0);
 }
 
 /** returns value treated as negative infinity in the LP solver */
@@ -2995,8 +2999,8 @@ SCIP_Real SCIPlpiExactInfinity(
 
 /** checks if given value is treated as negative infinity in the LP solver */
 SCIP_Bool SCIPlpiExactIsInfinity(
-   SCIP_LPIEXACT*        lpi,            /**< LP interface structure */
-   SCIP_Real             val             /**< given value */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   SCIP_Real             val                 /**< given value */
    )
 {  /*lint --e{715} */
    return val >= mpq_get_d(mpq_ILL_MAXDOUBLE);
@@ -3074,7 +3078,7 @@ SCIP_RETCODE SCIPlpiExactWriteLP(
 
 /** prints additional lpiex internal info */
 void SCIPlpiExactPrintInfo(
-   SCIP_LPIEXACT*          lpi                 /**< pointer to an LP interface structure */
+   SCIP_LPIEXACT*        lpi                 /**< pointer to an LP interface structure */
    )
 {
    mpq_lpinfo* lp;

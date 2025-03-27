@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2009,7 +2009,7 @@ SCIP_RETCODE consdataCreate(
        * for fractional variable values, the constraint cannot be checked
        */
       for( v = 0; v < (*consdata)->nvars; ++v )
-         assert(SCIPvarGetType((*consdata)->vars[v]) <= SCIP_VARTYPE_INTEGER);
+         assert(SCIPvarIsNonimpliedIntegral((*consdata)->vars[v]));
 #endif
    }
    else
@@ -8471,7 +8471,7 @@ SCIP_RETCODE createCapacityRestriction(
       }
 
       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-      SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
       if( consdata->demandrowssize == 0 )
       {
@@ -8955,7 +8955,7 @@ SCIP_RETCODE createCapacityRestrictionIntvars(
    }
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-   SCIPdebug( SCIP_CALL(SCIPprintRow(scip, row, NULL)) );
+   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
    SCIP_CALL( SCIPaddRow(scip, row, TRUE, cutoff) );
 

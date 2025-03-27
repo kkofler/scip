@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_rational.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -138,7 +139,7 @@ void SCIPintervalSet(
 SCIP_EXPORT
 void SCIPintervalSetRational(
    SCIP_INTERVAL*        resultant,          /**< interval to store value into */
-   SCIP_Rational*        value               /**< value to store */
+   SCIP_RATIONAL*        value               /**< value to store */
    );
 
 /** stores given infimum and supremum as interval */

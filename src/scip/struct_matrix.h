@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -45,14 +45,14 @@ extern "C" {
 
 struct SCIP_MatrixValsExact
 {
-   SCIP_Rational**       lbexact;            /**< exact lower bound per variable */
-   SCIP_Rational**       ubexact;            /**< exact upper bound per variable */
-   SCIP_Rational**       lhsexact;            /**< exact lhs per constraint */
-   SCIP_Rational**       rhsexact;            /**< exact rhs per constraint */
-   SCIP_Rational**       colmatvalexact;     /**< exact coefficients in column major format */
-   SCIP_Rational**       rowmatvalexact;     /**< exact coefficients in column major format */
-   SCIP_Rational**       minacivityexact;    /**< exact min activity per row */
-   SCIP_Rational**       maxacivityexact;    /**< exact max activity per row */
+   SCIP_RATIONAL**       lbexact;            /**< exact lower bound per variable */
+   SCIP_RATIONAL**       ubexact;            /**< exact upper bound per variable */
+   SCIP_RATIONAL**       lhsexact;            /**< exact lhs per constraint */
+   SCIP_RATIONAL**       rhsexact;            /**< exact rhs per constraint */
+   SCIP_RATIONAL**       colmatvalexact;     /**< exact coefficients in column major format */
+   SCIP_RATIONAL**       rowmatvalexact;     /**< exact coefficients in column major format */
+   SCIP_RATIONAL**       minacivityexact;    /**< exact min activity per row */
+   SCIP_RATIONAL**       maxacivityexact;    /**< exact max activity per row */
    int                   buffersize;         /**< necessary because rational buffer arrays need to be freed with a size */
    int                   buffersizenconss;   /**< necessary because rational buffer arrays need to be freed with a size */
 };

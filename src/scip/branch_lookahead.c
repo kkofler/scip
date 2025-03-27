@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -897,7 +897,8 @@ SCIP_RETCODE level2dataGetResult(
    /* we branched twice on the same variable; the result cannot be stored already */
    if( data->branchvar1 == data->branchvar2 )
    {
-      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY
+            || SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]));
       return SCIP_OKAY;
    }
 
@@ -941,7 +942,8 @@ SCIP_RETCODE level2dataStoreResult(
    /* we branched twice on the same variable; the result cannot be re-used lated */
    if( data->branchvar1 == data->branchvar2 )
    {
-      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY
+            || SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]));
       return SCIP_OKAY;
    }
 
@@ -2582,7 +2584,7 @@ SCIP_RETCODE branchOnVar(
 
    /* update the lower bounds in the children; we must not do this if columns are missing in the LP
     * (e.g., because we are doing branch-and-price) or the problem should be solved exactly */
-   if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+   if( SCIPallColsInLP(scip) && !SCIPisExact(scip) )
    {
       /* update the lower bound for the LPs for further children of both created nodes */
       if( decision->downdbvalid )
@@ -3188,7 +3190,7 @@ SCIP_Bool areBoundsChanged(
    assert(SCIPisFeasIntegral(scip, lowerbound));
    assert(SCIPisFeasIntegral(scip, upperbound));
    assert(!SCIPisEQ(scip, lowerbound, upperbound));
-   assert(SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(var));
 
    /* due to roundings the value might have changed slightly without an actual influence on the integral value */
    return SCIPvarGetLbLocal(var) > lowerbound + 0.5 || SCIPvarGetUbLocal(var) < upperbound - 0.5;
@@ -6088,7 +6090,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          }
 #endif
          /* update lower bound of current node */
-         if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+         if( SCIPallColsInLP(scip) && !SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, decision->proveddb) );
          }

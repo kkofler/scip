@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -70,7 +70,13 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    int*                  nchgcoefs           /**< number of changed coefficients */
    );
 
-/** create an empty the aggregation row */
+/** create an empty aggregation row
+ *
+ *  @note By default, this data structure uses quad precision via double-double arithmetic, i.e., it allocates a
+ *        SCIP_Real array of length two times SCIPgetNVars() for storing the coefficients.  In exact solving mode, we
+ *        cannot use quad precision because we need to control the ronding mode, hence only the first SCIPgetNVars()
+ *        entries are used.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowCreate(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -188,9 +194,9 @@ void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
-/** version for use in exact solvig mode of SCIPaggrRowClear */
+/** version for use in exact solving mode of SCIPaggrRowClear() */
 SCIP_EXPORT
-void SCIPaggrRowClearSafe(
+void SCIPaggrRowClearSafely(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 

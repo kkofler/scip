@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -147,7 +147,7 @@ void computeIntegerVariableBounds(
    lbglobal = SCIPvarGetLbGlobal(var);
    ubglobal = SCIPvarGetUbGlobal(var);
 
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var));
    /* get the current LP solution for each variable */
    lpsol = SCIPvarGetLPSol(var);
 
@@ -416,7 +416,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
       if( subvars[i] == NULL )
          continue;
 
-      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(subvars[i]));
       if( SCIPvarGetUbGlobal(subvars[i]) - SCIPvarGetLbGlobal(subvars[i]) < 0.5 )
          continue;
 
@@ -931,6 +931,9 @@ SCIP_RETCODE SCIPincludeHeurDins(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecDins, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDins) );

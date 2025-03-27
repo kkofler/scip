@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -119,6 +119,7 @@ int main(int argc, char** argv)
 	 fprintf(file, "%d ", getRandomInt(0, d, &seed));
       fprintf(file, "\n");
    }
+   fclose(file);
 
    printf("Wrote random LOP instance to %s\n", argv[1]);
    printf("Size: %d\n", n);

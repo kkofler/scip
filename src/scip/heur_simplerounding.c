@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -122,7 +122,7 @@ SCIP_RETCODE performSimpleRounding(
          newsolval = SCIPfeasFloor(scip, oldsolval);
       else if ( mayroundup )
          newsolval = SCIPfeasCeil(scip, oldsolval);
-      else if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+      else if( SCIPvarIsImpliedIntegral(var) )
       {
          ++nunroundableimplints;
          continue;
@@ -515,6 +515,9 @@ SCIP_RETCODE SCIPincludeHeurSimplerounding(
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecSimplerounding, heurdata) );
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySimplerounding) );

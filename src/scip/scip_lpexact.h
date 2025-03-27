@@ -47,25 +47,6 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -85,29 +66,30 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< pointer to fp-row that corresponds to this row */
    SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_Bool             isfprelaxable      /**< is it possible to make fp-relaxation of this row */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to create an fp relaxation of this row? */
    );
 
-/** creates and captures an exact LP row without any coefficients from a separator
+/** creates and captures an exact LP row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
+SCIP_RETCODE SCIPcreateRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEXACT**       rowexact,           /**< pointer to exact row */
+   SCIP_ROWEXACT**       row,                /**< pointer to row */
    SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
-   SCIP_SEPA*            sepa,               /**< separator that creates the row */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COLEXACT**       cols,               /**< array with columns of row entries */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of row entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    );
 
 /** creates and captures an exact LP row from an existing fp row
@@ -189,7 +171,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgRowExactLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        lhs                 /**< new left hand side */
+   SCIP_RATIONAL*        lhs                 /**< new left hand side */
    );
 
 /** changes right hand side of exact LP row
@@ -205,7 +187,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgRowExactRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        rhs                 /**< new right hand side */
+   SCIP_RATIONAL*        rhs                 /**< new right hand side */
    );
 
 /** resolves variables to columns and adds them with the coefficients to the row;
@@ -226,7 +208,7 @@ SCIP_RETCODE SCIPaddVarsToRowExact(
    SCIP_ROWEXACT*        row,                /**< LP row */
    int                   nvars,              /**< number of variables to add to the row */
    SCIP_VAR**            vars,               /**< problem variables to add */
-   SCIP_Rational**       vals                /**< values of coefficients */
+   SCIP_RATIONAL**       vals                /**< values of coefficients */
    );
 
 /** returns the activity of a row in the last LP or pseudo solution
@@ -240,7 +222,23 @@ SCIP_EXPORT
 void SCIPgetRowActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
+   );
+
+/** returns the activity of a row for the given primal solution with running error analysis
+ *
+ *  @return the activitiy of a row for the given primal solution and the error bound of the activity; returns true on success
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPgetRowSolActivityWithErrorboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row,                /**< LP row */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            activity,           /**< the approximate activity */
+   SCIP_Real*            errorbound          /**< the error bound */
    );
 
 /** returns the feasibility of a row in the last LP or pseudo solution
@@ -254,7 +252,7 @@ SCIP_EXPORT
 void SCIPgetRowFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** returns the activity of a row for the given primal solution
@@ -265,12 +263,12 @@ void SCIPgetRowFeasibilityExact(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-void SCIPgetRowSolActivityExact(
+SCIP_RETCODE SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             useexact,           /**< true if sol should be considered instead of sol */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** returns the feasibility of a row for the given primal solution
@@ -281,11 +279,11 @@ void SCIPgetRowSolActivityExact(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-void SCIPgetRowSolFeasibilityExact(
+SCIP_RETCODE SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** output exact row to file stream via the message handler system
@@ -341,7 +339,7 @@ SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
 SCIP_EXPORT
 void SCIPgetLPExactObjval(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    );
 
 /** changes variable's lower bound in current exact dive
@@ -358,7 +356,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    );
 
 /** changes variable's upper bound in current exact dive
@@ -375,7 +373,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    );
 
 /** solves the exact LP of the current dive; no separation or pricing is applied
@@ -428,6 +426,30 @@ SCIP_RETCODE SCIPstartExactDive(
  */
 SCIP_EXPORT
 SCIP_Bool SCIPisExactDivePossible(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether we are in exact diving mode
+ *
+ *  @return whether we are in exact diving mode.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPinExactDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

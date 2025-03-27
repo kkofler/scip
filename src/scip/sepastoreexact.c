@@ -33,24 +33,23 @@
 #include <assert.h>
 
 #include "scip/def.h"
+#include "scip/cons.h"
+#include "scip/cuts.h"
+#include "scip/debug.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/lpexact.h"
+#include "scip/misc.h"
+#include "scip/rational.h"
+#include "scip/reopt.h"
+#include "scip/sepa.h"
+#include "scip/sepastoreexact.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/lp.h"
-#include "scip/var.h"
-#include "scip/tree.h"
-#include "scip/reopt.h"
-#include "scip/sepastoreexact.h"
-#include "scip/event.h"
-#include "scip/sepa.h"
-#include "scip/cons.h"
-#include "scip/debug.h"
-#include "scip/scip.h"
-#include "scip/cuts.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_sepastore.h"
-#include "scip/misc.h"
-#include "scip/lpexact.h"
-#include "scip/rational.h"
-#include "scip/pub_lpexact.h"
+#include "scip/tree.h"
+#include "scip/var.h"
 
 /** resizes cuts and score arrays to be able to store at least num entries */
 static
@@ -155,11 +154,10 @@ SCIP_RETCODE SCIPsepastoreExactAddCut(
    assert(sepastoreexact != NULL);
    assert(set != NULL);
    assert(cut != NULL);
-   assert(!RatIsNegInfinity(SCIProwExactGetLhs(cut)) || !RatIsInfinity(SCIProwExactGetRhs(cut)));
+   assert(!SCIPrationalIsNegInfinity(SCIProwExactGetLhs(cut)) || !SCIPrationalIsInfinity(SCIProwExactGetRhs(cut)));
    assert(eventqueue != NULL);
 
-   /* debug: check cut for feasibility */
-   /** @todo exip: actually check the exact row */
+   /* debug: check cut for feasibility; note that this just checks for fp feasibility and could be extended */
    SCIP_CALL( SCIPdebugCheckRow(set, cut->fprow) ); /*lint !e506 !e774*/
 
    /* update statistics of total number of found cuts */
@@ -184,84 +182,6 @@ SCIP_RETCODE SCIPsepastoreExactAddCut(
 
    sepastoreexact->cuts[pos] = cut;
    sepastoreexact->ncuts++;
-
-   return SCIP_OKAY;
-}
-
-/** adds cuts to the LP and clears separation storage */
-SCIP_RETCODE SCIPsepastoreExactSyncLPs(
-   SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LPEXACT*         lpexact,            /**< LP data */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
-   )
-{
-   SCIP_LP* fplp;
-   SCIP_ROWEXACT* rowexact;
-   int* rowdset;
-   int nrowsfp;
-   int nrowsex;
-   int i;
-   SCIP_Bool removecut;
-
-   if( !set->exact_enabled )
-      return SCIP_OKAY;
-
-   fplp = lpexact->fplp;
-
-   assert(fplp != NULL);
-
-   nrowsfp = SCIPlpGetNRows(fplp);
-   nrowsex = SCIPlpExactGetNRows(lpexact);
-
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdset, lpexact->nrows) );
-
-   removecut = FALSE;
-
-   /* this method should sync the fp-lp withe the exact lp */
-
-   /* remove all rows from exact lp that are not in the floating point lp */
-   for( i = 0; i < nrowsex; ++i )
-   {
-      SCIP_ROW* fprow = lpexact->rows[i]->fprow;
-
-      if( fprow == NULL || !SCIProwIsInLP(fprow) || fprow->lppos != i || removecut )
-      {
-         removecut = TRUE;
-         rowdset[i] = 1;
-      }
-      else
-         rowdset[i] = 0;
-   }
-
-   SCIP_CALL( SCIPlpExactDelRowset(lpexact, blkmem, set, rowdset) );
-
-   for( i = 0; i < nrowsfp; ++i )
-   {
-      rowexact = SCIProwGetRowExact(fplp->rows[i]);
-      if( rowexact != NULL )
-      {
-         /* if the row is already in lp, do nothing */
-         if( !SCIProwExactIsInLP(rowexact) )
-         {
-            /* add the exact row to the exact lp */
-            SCIP_CALL( SCIPlpExactAddRow(lpexact, set, rowexact) );
-         }
-      }
-      else
-      {
-         assert(SCIProwGetOriginSepa(fplp->rows[i]) != NULL);
-
-         SCIP_CALL( SCIPsepastoreExactAddCut(sepastoreexact, set, eventqueue, rowexact) );
-         SCIP_CALL( SCIPlpExactAddRow(lpexact, set,rowexact) );
-         SCIP_CALL( SCIProwExactRelease(&rowexact, blkmem, set, lpexact) );
-      }
-   }
-
-   /** @todo exip: make this more efficient by not enforcing same order of rows in exact/fp lp */
-
-   SCIPsetFreeBufferArray(set, &rowdset);
 
    return SCIP_OKAY;
 }

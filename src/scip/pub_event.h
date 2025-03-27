@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 #include "scip/def.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
+#include "scip/type_rational.h"
 #include "scip/type_sol.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
@@ -142,7 +143,7 @@ SCIP_Real SCIPeventGetOldbound(
 
 /** gets exact old bound for a bound change event */
 SCIP_EXPORT
-SCIP_Rational* SCIPeventGetOldboundExact(
+SCIP_RATIONAL* SCIPeventGetOldboundExact(
    SCIP_EVENT*           event               /**< event */
    );
 
@@ -161,6 +162,18 @@ SCIP_VARTYPE SCIPeventGetOldtype(
 /** gets new variable type for a variable type change event */
 SCIP_EXPORT
 SCIP_VARTYPE SCIPeventGetNewtype(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets old implied integral type for an implied integral type change event */
+SCIP_EXPORT
+SCIP_IMPLINTTYPE SCIPeventGetOldImpltype(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new implied integral type for an implied integral type change event */
+SCIP_EXPORT
+SCIP_IMPLINTTYPE SCIPeventGetNewImpltype(
    SCIP_EVENT*           event               /**< event */
    );
 

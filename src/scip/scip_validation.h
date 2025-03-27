@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -98,8 +98,8 @@ SCIP_RETCODE SCIPvalidateSolve(
 SCIP_EXPORT
 SCIP_RETCODE SCIPvalidateSolveExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
-   SCIP_Rational*        dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_RATIONAL*        primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_RATIONAL*        dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
    SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
                                                *  or NULL */

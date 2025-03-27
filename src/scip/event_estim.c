@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2749,7 +2749,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    eventtype = SCIPeventGetType(event);
    treedata = eventhdlrdata->treedata;
 
-   if( SCIPisExactSolve(scip) )
+   if( SCIPisExact(scip) )
       return SCIP_OKAY;
 
    /* actual leaf nodes for our tree data are children/siblings/leaves or the focus node itself (deadend)
@@ -2815,7 +2815,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       if( eventhdlrdata->restarthitcounter >= eventhdlrdata->hitcounterlim )
       {
          /* safe that we triggered a restart at this run */
-         if( !SCIPisExactSolve(scip) && SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
+         if( !SCIPisExact(scip) && SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
          {
             eventhdlrdata->nrestartsperformed++;
 
@@ -2995,7 +2995,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputEstim,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputEstim, NULL,
          NULL, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    /* include time series into event handler */

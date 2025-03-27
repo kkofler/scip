@@ -45,7 +45,7 @@ extern "C" {
 /** rational wrapper struct */
 struct SCIP_Rational
 {
-   scip_rational::Rational val;              /**< value of the rational */
+   scip::Rational val;                       /**< value of the rational */
    unsigned int isinf:1;                     /**< is the value infinite? sign is determined by val */
    unsigned int isfprepresentable:2;         /**< is the value exactly representable as floating point number?
                                               *   (0 - unknown, 1 - yes, 2 - no) */
@@ -54,7 +54,7 @@ struct SCIP_Rational
 /** rational array struct, essentially a std vector with all indices offset by firstidx*/
 struct SCIP_RationalArray
 {
-   std::vector<SCIP_Rational> vals;          /**< values of the array */
+   std::vector<SCIP_RATIONAL> vals;          /**< values of the array */
    int firstidx;                             /**< first used index */
 };
 

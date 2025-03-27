@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1692,7 +1692,7 @@ SCIP_RETCODE registerBranchingCandidates(
       violation = SCIPgetSolVal(scip, sol, var) - bounds[v];
 
       /* if variable is continuous, then we cannot branch on one of the variable bounds */
-      if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS ||
+      if( SCIPvarIsIntegral(vars[v]) ||
          ((SCIPisInfinity(scip, -varlb) || !SCIPisFeasEQ(scip, bounds[v], varlb)) &&
           (SCIPisInfinity(scip,  varub) || !SCIPisFeasEQ(scip, bounds[v], varub))) )
       {

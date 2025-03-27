@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -49,6 +49,7 @@
 #include "scip/clock.h"
 #include "scip/debug.h"
 #include "scip/dialog.h"
+#include "scip/iisfinder.h"
 #include "scip/interrupt.h"
 #include "scip/mem.h"
 #include "scip/message_default.h"
@@ -82,8 +83,16 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+#ifdef SCIP_WITH_MPFR
+#include <mpfr.h>
+#endif
+
 #ifdef SCIP_WITH_ZLIB
 #include <zlib.h>
+#endif
+
+#ifdef SCIP_WITH_BOOST
+#include <boost/version.hpp>
 #endif
 
 /* In debug mode, the following methods are implemented as function calls to ensure
@@ -129,7 +138,7 @@ int SCIPminorVersion(
    return SCIP_VERSION_MINOR;
 }
 
-/** returns SCIP technical version
+/** returns SCIP technical (or patch) version
  *
  *  @return technical SCIP version
  */
@@ -143,6 +152,8 @@ int SCIPtechVersion(
 /** returns SCIP sub version number
  *
  *  @return subversion SCIP version
+ *
+ *  @deprecated SCIPsubversion() always returns 0 and will be removed in a future release.
  */
 int SCIPsubversion(
    void
@@ -164,9 +175,6 @@ void SCIPprintVersion(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP version %d.%d.%d",
       SCIPmajorVersion(), SCIPminorVersion(), SCIPtechVersion());
-#if SCIP_SUBVERSION > 0
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, ".%d", SCIPsubversion());
-#endif
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, " [precision: %d byte]", (int)sizeof(SCIP_Real));
 
@@ -255,6 +263,7 @@ SCIP_RETCODE doScipCreate(
    SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
+   SCIP_CALL( SCIPiisCreate(&(*scip)->iis, (*scip)->set, SCIPblkmem(*scip)) );
 
    /* include additional core functionality */
    SCIP_CALL( SCIPincludeCorePlugins(*scip) );
@@ -271,7 +280,7 @@ SCIP_RETCODE doScipCreate(
    {
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
    }
-   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") != 0 )
+   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") != 0 && strcmp(SCIPlpiExactGetSolverName(), SCIPlpiGetSolverName()) != 0 )
    {
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiExactGetSolverName(), SCIPlpiExactGetSolverDesc()) );
    }
@@ -294,16 +303,45 @@ SCIP_RETCODE doScipCreate(
    }
 #endif
 
+   /* check whether all dependencies for exact solving mode are present */
 #ifdef SCIP_WITH_EXACTSOLVE
-#ifndef SCIP_WITH_BOOST
-   SCIPerrorMessage("SCIP was compiled with exact solve support, but without Boost. Please recompile SCIP with Boost.\n");
+#ifndef SCIP_WITH_GMP
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without GMP. Please recompile SCIP with GMP.\n");
    return SCIP_ERROR;
+   /* external code information for GMP added in SCIPincludeConshdlrCountsols() */
 #endif
 #ifndef SCIP_WITH_MPFR
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
    return SCIP_ERROR;
+#else
+   {
+      char name[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "MPFR %s", MPFR_VERSION_STRING);
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
+   }
+#endif /*lint --e{529}*/
+#ifndef SCIP_WITH_BOOST
+   SCIPerrorMessage("SCIP was compiled with exact solve support, but without Boost. Please recompile SCIP with Boost.\n");
+   return SCIP_ERROR;
+#else
+   {
+      char name[SCIP_MAXSTRLEN];
+      int boost_version_major = BOOST_VERSION / 100000;
+      int boost_version_minor = BOOST_VERSION / 100 % 1000;
+      int boost_version_patch = BOOST_VERSION % 100;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "Boost %d.%d.%d", boost_version_major, boost_version_minor, boost_version_patch);
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "Boost C++ Libraries (boost.org)") );
+   }
 #endif
+   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") == 0 )
+   {
+      SCIPerrorMessage("SCIP was compiled with exact solve support, but without an exact LP solver. Please recompile SCIP with an exact LP solver.\n");
+      return SCIP_ERROR;
+   }
 #endif
+
    if( SCIPtpiIsAvailable() )
    {
       char name[20];
@@ -377,6 +415,7 @@ SCIP_RETCODE SCIPfree(
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
 
+   SCIP_CALL( SCIPiisFree(&(*scip)->iis, SCIPblkmem(*scip)) );
    SCIP_CALL( SCIPsyncstoreRelease(&(*scip)->syncstore) );
    SCIP_CALL( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
    SCIP_CALL( SCIPdialoghdlrFree(*scip, &(*scip)->dialoghdlr) );
@@ -536,6 +575,55 @@ SCIP_STATUS SCIPgetStatus(
    }
 }
 
+/** gets name for a solution status */
+const char* SCIPstatusName(
+   SCIP_STATUS           status              /**< SCIP status code */
+   )
+{
+   switch( status )
+   {
+   case SCIP_STATUS_UNKNOWN:
+      return "unknown";
+   case SCIP_STATUS_USERINTERRUPT:
+      return "user interrupt";
+   case SCIP_STATUS_NODELIMIT:
+      return "node limit reached";
+   case SCIP_STATUS_TOTALNODELIMIT:
+      return "total node limit reached";
+   case SCIP_STATUS_STALLNODELIMIT:
+      return "stall node limit reached";
+   case SCIP_STATUS_TIMELIMIT:
+      return "time limit reached";
+   case SCIP_STATUS_MEMLIMIT:
+      return "memory limit reached";
+   case SCIP_STATUS_GAPLIMIT:
+      return "gap limit reached";
+   case SCIP_STATUS_PRIMALLIMIT:
+      return "primal limit reached";
+   case SCIP_STATUS_DUALLIMIT:
+      return "dual limit reached";
+   case SCIP_STATUS_SOLLIMIT:
+      return "solution limit reached";
+   case SCIP_STATUS_BESTSOLLIMIT:
+      return "solution improvement limit reached";
+   case SCIP_STATUS_RESTARTLIMIT:
+      return "restart limit reached";
+   case SCIP_STATUS_OPTIMAL:
+      return "optimal solution found";
+   case SCIP_STATUS_INFEASIBLE:
+      return "infeasible";
+   case SCIP_STATUS_UNBOUNDED:
+      return "unbounded";
+   case SCIP_STATUS_INFORUNBD:
+      return "infeasible or unbounded";
+   case SCIP_STATUS_TERMINATE:
+      return "termination signal received";
+   default:
+      SCIPerrorMessage("invalid status code <%d>\n", status);
+      return NULL;
+   }
+}
+
 /** outputs solution status
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -550,66 +638,7 @@ SCIP_RETCODE SCIPprintStatus(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( SCIPgetStatus(scip) )
-   {
-   case SCIP_STATUS_UNKNOWN:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown");
-      break;
-   case SCIP_STATUS_USERINTERRUPT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "user interrupt");
-      break;
-   case SCIP_STATUS_NODELIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "node limit reached");
-      break;
-   case SCIP_STATUS_TOTALNODELIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "total node limit reached");
-      break;
-   case SCIP_STATUS_STALLNODELIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "stall node limit reached");
-      break;
-   case SCIP_STATUS_TIMELIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "time limit reached");
-      break;
-   case SCIP_STATUS_MEMLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "memory limit reached");
-      break;
-   case SCIP_STATUS_GAPLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "gap limit reached");
-      break;
-   case SCIP_STATUS_PRIMALLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "primal limit reached");
-      break;
-   case SCIP_STATUS_DUALLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "dual limit reached");
-      break;
-   case SCIP_STATUS_SOLLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "solution limit reached");
-      break;
-   case SCIP_STATUS_BESTSOLLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "solution improvement limit reached");
-      break;
-   case SCIP_STATUS_RESTARTLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "restart limit reached");
-      break;
-   case SCIP_STATUS_OPTIMAL:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "optimal solution found");
-      break;
-   case SCIP_STATUS_INFEASIBLE:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "infeasible");
-      break;
-   case SCIP_STATUS_UNBOUNDED:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "unbounded");
-      break;
-   case SCIP_STATUS_INFORUNBD:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "infeasible or unbounded");
-      break;
-   case SCIP_STATUS_TERMINATE:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "termination signal received");
-      break;
-   default:
-      SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
-      return SCIP_INVALIDDATA;
-   }
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "%s", SCIPstatusName(SCIPgetStatus(scip)));
 
    return SCIP_OKAY;
 }

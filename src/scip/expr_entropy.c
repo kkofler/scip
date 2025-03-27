@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -639,12 +639,12 @@ SCIP_DECL_EXPRINTEGRALITY(integralityEntropy)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integrality != NULL);
 
    /* TODO it is possible to check for the special case that the child is integral and its bounds are [0,1]; in
     * this case the entropy expression can only achieve 0 and is thus integral
     */
-   *isintegral = FALSE;
+   *integrality = SCIP_IMPLINTTYPE_NONE;
 
    return SCIP_OKAY;
 }

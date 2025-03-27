@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -654,7 +654,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
        * if we are not in exact solving mode
        */
-      if( cutoff && !SCIPisExactSolve(scip) )
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          goto TERMINATE;
@@ -677,8 +677,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #endif
 
    /* allocate memory for all variables which will be fixed to one during probing */
-   SCIP_CALL(SCIPallocBufferArray(scip, &onefixvars, nbinvars) );
-   SCIP_CALL(SCIPallocBufferArray(scip, &onefixvals, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &onefixvars, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &onefixvals, nbinvars) );
    nonefixvars = 0;
 
    /* apply fixings due to clique information */
@@ -1076,6 +1076,9 @@ SCIP_RETCODE SCIPincludeHeurClique(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecClique, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyClique) );

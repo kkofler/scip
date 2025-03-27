@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1313,7 +1313,7 @@ SCIP_RETCODE initData(
           * to a binary variable later during presolving when its upper bound was changed to 1. In this case,
           * the implication might not have been created.
           */
-         if( SCIPvarGetType(vbvar) == SCIP_VARTYPE_BINARY
+         if( SCIPvarGetType(vbvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vbvar)
             && SCIPvarHasImplic(vbvar, isIndexLowerbound(startidx), var, getBoundtype(v)) )
          {
             SCIPdebugMsg(scip, "varbound <%s> %s %g * <%s> + %g not added to propagator data due to reverse implication\n",
@@ -3103,7 +3103,8 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
 
    assert(getVarIndex(propdata->topoorder[idx]) < SCIPgetNVars(scip));
    assert(SCIPvarGetType(propdata->vars[getVarIndex(propdata->topoorder[idx])]) != SCIP_VARTYPE_BINARY
-      || (isIndexLowerbound(propdata->topoorder[idx]) == (SCIPeventGetNewbound(event) > 0.5)));
+         || SCIPvarIsImpliedIntegral(propdata->vars[getVarIndex(propdata->topoorder[idx])])
+         || (isIndexLowerbound(propdata->topoorder[idx]) == (SCIPeventGetNewbound(event) > 0.5)));
 
    /* add the bound change to the propagation queue, if it is not already contained */
    if( !propdata->inqueue[idx] )

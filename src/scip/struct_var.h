@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -94,7 +94,7 @@ struct SCIP_InferenceData
 struct SCIP_BoundChg
 {
    SCIP_Real             newbound;           /**< new value for bound */
-   SCIP_Rational*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
+   SCIP_RATIONAL*        newboundexact;      /**< new value for exact bound, or NULL if not needed */
    union
    {
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
@@ -181,8 +181,8 @@ struct SCIP_Dom
 /** exact domain of a variable */
 struct SCIP_DomExact
 {
-   SCIP_Rational*        lb;                 /**< exact lower bound of variables */
-   SCIP_Rational*        ub;                 /**< exact upper bound of variables */
+   SCIP_RATIONAL*        lb;                 /**< exact lower bound of variables */
+   SCIP_RATIONAL*        ub;                 /**< exact upper bound of variables */
    SCIP_Longint          lbcertificateidx;   /**< certificate index of lower bound (-1 if not set or no certificate active) */
    SCIP_Longint          ubcertificateidx;   /**< certificate index of upper bound (-1 if not set or no certificate active) */
 };
@@ -205,8 +205,8 @@ struct SCIP_Aggregate
 /** exact aggregation information: x = a*y + c */
 struct SCIP_AggregateExact
 {
-   SCIP_Rational*        scalar;             /**< multiplier a in aggregation */
-   SCIP_Rational*        constant;           /**< constant shift c in aggregation */
+   SCIP_RATIONAL*        scalar;             /**< multiplier a in aggregation */
+   SCIP_RATIONAL*        constant;           /**< constant shift c in aggregation */
 };
 
 /** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
@@ -222,8 +222,8 @@ struct SCIP_Multaggr
 /** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
 struct SCIP_MultaggrExact
 {
-   SCIP_Rational*        constant;           /**< constant shift c in multiple aggregation */
-   SCIP_Rational**       scalars;            /**< multipliers a in multiple aggregation */
+   SCIP_RATIONAL*        constant;           /**< constant shift c in multiple aggregation */
+   SCIP_RATIONAL**       scalars;            /**< multipliers a in multiple aggregation */
 };
 
 /** negation information: x' = c - x */
@@ -235,13 +235,13 @@ struct SCIP_Negate
 /** exact variable domains and further information */
 struct SCIP_VarDataExact
 {
-   SCIP_Rational*        obj;                /**< exact rational objective */
+   SCIP_RATIONAL*        obj;                /**< exact rational objective */
    SCIP_INTERVAL         objinterval;        /**< interval approximation of obj (for faster performance) */
    SCIP_DOMEXACT         locdom;             /**< exact local bounds */
    SCIP_DOMEXACT         glbdom;             /**< exact global bound */
    SCIP_DOMEXACT         origdom;            /**< original domain */
    SCIP_AGGREGATEEXACT   aggregate;          /**< exact aggregation data */
-   SCIP_MULTAGGREXACT    multaggr;          /**< exact aggregation data */
+   SCIP_MULTAGGREXACT    multaggr;           /**< exact aggregation data */
    SCIP_COLEXACT*        colexact;           /**< column in exact lp */
    SCIP_VARSTATUS        varstatusexact;     /**< status in exact lp */
    int                   certificateindex;   /**< original probindex (needed for certificate), or -1 */
@@ -322,7 +322,8 @@ struct SCIP_Var
    unsigned int          deleted:1;          /**< TRUE iff variable was marked for deletion from the problem */
    unsigned int          donotaggr:1;        /**< TRUE iff variable is not allowed to be aggregated */
    unsigned int          donotmultaggr:1;    /**< TRUE iff variable is not allowed to be multi-aggregated */
-   unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
+   unsigned int          vartype:2;          /**< type of variable: binary, integer, continuous */
+   unsigned int          varimpltype:2;      /**< implied integral type of variable: none, weak or strong */
    unsigned int          varstatus:3;        /**< status of variable: original, loose, column, fixed, aggregated, multiaggregated, negated */
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */
    unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */

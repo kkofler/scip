@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,7 +46,6 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_debug.h"
 #include "scip/scipdefplugins.h"
-#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -1994,7 +1993,6 @@ SCIP_RETCODE addScenarioVarsToProb(
    {
       SCIP_VAR* var;
       SCIP_Real obj;
-      SCIP_VARTYPE vartype;
 
       SCIPdebugMessage("Original problem variable <%s> is being duplicated for scenario %d\n", SCIPvarGetName(vars[i]),
          getScenarioNum(scip, scenario));
@@ -2004,13 +2002,11 @@ SCIP_RETCODE addScenarioVarsToProb(
 
       obj = SCIPvarGetObj(vars[i])*probability;
 
-      vartype = SCIPvarGetType(vars[i]);
-
       /* creating a variable as a copy of the original variable. */
       getScenarioEntityName(name, SCIPvarGetName(vars[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
-      SCIP_CALL( SCIPcreateVar(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
-            obj, vartype, SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,
-            NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
+            obj, SCIPvarGetType(vars[i]), SCIPvarGetImplType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]),
+            NULL, NULL, NULL, NULL, NULL) );
 
       SCIPdebugMessage("Adding variable <%s>\n", name);
 
@@ -2126,9 +2122,9 @@ SCIP_RETCODE getScenarioDecompVar(
    {
       SCIP_VAR* var;
       /* creating a variable as a copy of the original variable. */
-      SCIP_CALL( SCIPcreateVar(scip, &var, varname, SCIPvarGetLbOriginal(searchvar), SCIPvarGetUbOriginal(searchvar),
-            0.0, SCIPvarGetType(searchvar), SCIPvarIsInitial(searchvar), SCIPvarIsRemovable(searchvar), NULL, NULL,
-            NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &var, varname, SCIPvarGetLbOriginal(searchvar), SCIPvarGetUbOriginal(searchvar),
+            0.0, SCIPvarGetType(searchvar), SCIPvarGetImplType(searchvar), SCIPvarIsInitial(searchvar), SCIPvarIsRemovable(searchvar),
+            NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, var) );
 
@@ -2748,12 +2744,6 @@ SCIP_DECL_READERREAD(readerReadSto)
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIPerrorMessage("reading of sto format in exact solving mode is not yet supported\n");
-      return SCIP_READERROR;
-   }
 
    correader = SCIPfindReader(scip, "correader");
    timreader = SCIPfindReader(scip, "timreader");

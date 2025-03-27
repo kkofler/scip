@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -135,14 +135,16 @@ struct SCIP_Expr
    SCIP_Longint          activitytag;        /**< tag of variable bounds for which activity is valid */
 
    /* curvature information */
-   SCIP_EXPRCURV         curvature;           /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
+   SCIP_EXPRCURV         curvature;          /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
 
    /* integrality information */
-   SCIP_Bool             isintegral;          /**< whether expression value is integral in feasible solutions */
+   SCIP_IMPLINTTYPE      integrality;        /**< indicates whether the expression is integral. 0: not integral,
+                                               *< 1: integral but contains weakly implied integral vars. 2: integral without
+                                               *< weakly implied integral variables */
 
    /* view expression as quadratic */
-   SCIP_QUADEXPR*        quaddata;            /**< representation of expression as a quadratic, if checked and being quadratic */
-   SCIP_Bool             quadchecked;         /**< whether it has been checked whether the expression is quadratic */
+   SCIP_QUADEXPR*        quaddata;           /**< representation of expression as a quadratic, if checked and being quadratic */
+   SCIP_Bool             quadchecked;        /**< whether it has been checked whether the expression is quadratic */
 };
 
 /** representation of an expression as quadratic */

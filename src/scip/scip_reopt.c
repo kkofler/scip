@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -397,8 +397,8 @@ SCIP_RETCODE SCIPapplyReopt(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPapplyReopt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPreoptApply(scip->reopt, scip, scip->set, scip->stat, scip->transprob, scip->origprob, scip->tree,
-         scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, scip->mem->probmem, reoptnode, id, estimate,
-         childnodes, ncreatedchilds, naddedconss, childnodessize, success) );
+         scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable, scip->mem->probmem,
+         reoptnode, id, estimate, childnodes, ncreatedchilds, naddedconss, childnodessize, success) );
 
    return SCIP_OKAY;
 }

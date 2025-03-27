@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -572,7 +572,13 @@ void SCIPexprSetCurvature(
    SCIP_EXPRCURV         curvature           /**< curvature of the expression */
    );
 
-/** returns whether an expression is integral */
+/** returns implied integrality of an expression */
+SCIP_EXPORT
+SCIP_IMPLINTTYPE SCIPexprGetIntegrality(
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** returns whether an expression is integral, i.e. whether the integrality flag is not equal to SCIP_IMPLINTTYPE_NONE */
 SCIP_EXPORT
 SCIP_Bool SCIPexprIsIntegral(
    SCIP_EXPR*            expr                /**< expression */
@@ -582,7 +588,7 @@ SCIP_Bool SCIPexprIsIntegral(
 SCIP_EXPORT
 void SCIPexprSetIntegrality(
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Bool             isintegral          /**< integrality of the expression */
+   SCIP_IMPLINTTYPE      integrality         /**< integrality level of the expression */
    );
 
 /** @} */
@@ -689,8 +695,9 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 #define SCIPexprSetActivity(expr, activity_, activitytag_) do { (expr)->activity = activity_; (expr)->activitytag = activitytag_; } while (FALSE)
 #define SCIPexprGetCurvature(expr)                (expr)->curvature
 #define SCIPexprSetCurvature(expr, curvature_)    (expr)->curvature = curvature_
-#define SCIPexprIsIntegral(expr)                  (expr)->isintegral
-#define SCIPexprSetIntegrality(expr, isintegral_) expr->isintegral = isintegral_
+#define SCIPexprGetIntegrality(expr)              (expr)->integrality
+#define SCIPexprIsIntegral(expr)                  ((expr)->integrality != SCIP_IMPLINTTYPE_NONE)
+#define SCIPexprSetIntegrality(expr, integrality_)   (expr)->integrality = integrality_
 #define SCIPexprAreQuadraticExprsVariables(expr)  (expr)->quaddata->allexprsarevars
 #endif
 

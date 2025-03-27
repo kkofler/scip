@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -683,7 +683,7 @@ SCIP_RETCODE innerPresolve(
    assert(heurdata != NULL);
 
    /* allocate the heuristic specific variables */
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, varspointer, vars, nvars));
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, varspointer, vars, nvars) );
 
    /* sort the variables with respect to their columns */
    SCIPsortPtr((void**)(*varspointer), SCIPvarcolComp, nvars);
@@ -1069,7 +1069,8 @@ SCIP_RETCODE optimize(
             slavesolval = SCIPgetSolVal(scip, worksol, slave);
             changedobj = 0.0;
 
-            assert(SCIPvarGetType(master) == SCIPvarGetType(slave));
+            assert(SCIPvarIsImpliedIntegral(master) == SCIPvarIsImpliedIntegral(slave)
+                  && (SCIPvarIsImpliedIntegral(master) || SCIPvarGetType(master) == SCIPvarGetType(slave)));
             assert(SCIPisFeasIntegral(scip, slavesolval));
             assert(opttype == OPTTYPE_INTEGER || (SCIPisFeasLE(scip, mastersolval, 1.0) || SCIPisFeasGE(scip, mastersolval, 0.0)));
 
@@ -1709,7 +1710,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
             solval = SCIPgetSolVal(scip, worksol, allvars[i]);
 
-            assert(SCIPvarGetType(allvars[i]) != SCIP_VARTYPE_CONTINUOUS && SCIPisFeasIntegral(scip, solval));
+            assert(SCIPvarIsIntegral(allvars[i]) && SCIPisFeasIntegral(scip, solval));
 
             SCIP_CALL( SCIPchgVarLbDive(scip, allvars[i], solval) );
             SCIP_CALL( SCIPchgVarUbDive(scip, allvars[i], solval) );
@@ -1746,7 +1747,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
          /* in exact mode we have to end diving prior to trying the solution */
-         if( SCIPisExactSolve(scip) )
+         if( SCIPisExact(scip) )
          {
             SCIP_CALL( SCIPunlinkSol(scip, worksol) );
             SCIP_CALL( SCIPendDive(scip) );
@@ -1809,6 +1810,9 @@ SCIP_RETCODE SCIPincludeHeurTwoopt(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTwoopt, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTwoopt) );

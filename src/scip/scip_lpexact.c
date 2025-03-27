@@ -60,8 +60,10 @@
 #include "scip/sepastoreexact.h"
 #include "scip/set.h"
 #include "scip/solve.h"
+#include "scip/struct_lpexact.h"
 #include "scip/struct_primal.h"
 #include "scip/struct_prob.h"
+#include "scip/struct_mem.h"
 #include "scip/tree.h"
 #include "scip/var.h"
 
@@ -130,7 +132,7 @@ SCIP_RETCODE SCIPreleaseRowExact(
 SCIP_RETCODE SCIPchgRowExactLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        lhs                 /**< new left hand side */
+   SCIP_RATIONAL*        lhs                 /**< new left hand side */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgRowExactLhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -154,7 +156,7 @@ SCIP_RETCODE SCIPchgRowExactLhs(
 SCIP_RETCODE SCIPchgRowExactRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_Rational*        rhs                 /**< new right hand side */
+   SCIP_RATIONAL*        rhs                 /**< new right hand side */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgRowExactRhs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -183,7 +185,7 @@ SCIP_RETCODE SCIPaddVarsToRowExact(
    SCIP_ROWEXACT*        row,                /**< LP row */
    int                   nvars,              /**< number of variables to add to the row */
    SCIP_VAR**            vars,               /**< problem variables to add */
-   SCIP_Rational**       vals                /**< values of coefficients */
+   SCIP_RATIONAL**       vals                /**< values of coefficients */
    )
 {
    int v;
@@ -229,43 +231,45 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP_ROWEXACT**       rowexact,           /**< pointer to row */
    SCIP_ROW*             fprow,              /**< corresponding fp-row */
    SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to create an fp relaxation of this row? */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConsExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, fprowrhs, scip->mem->probmem, scip->set,
-                                 scip->stat, scip->lpexact, 0, NULL, NULL, lhs, rhs,
-                                 SCIP_ROWORIGINTYPE_CONS, isfprelaxable, SCIProwGetOriginCons(fprow)) );
+   assert(SCIProwGetOrigintype(fprow) == SCIP_ROWORIGINTYPE_CONS);
+   assert(fprowrhs == NULL || SCIProwGetOriginCons(fprow) == SCIProwGetOriginCons(fprowrhs));
+
+   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, fprowrhs, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, 0, NULL, NULL, lhs, rhs, isfprelaxable) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures an exact LP row without any coefficients from a separator
+/** creates and captures an exact LP row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
+SCIP_RETCODE SCIPcreateRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWEXACT**       rowexact,           /**< pointer to exact row */
+   SCIP_ROWEXACT**       row,                /**< pointer to row */
    SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
-   SCIP_SEPA*            sepa,               /**< separator that creates the row */
-   SCIP_Rational*        lhs,                /**< left hand side of row */
-   SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COLEXACT**       cols,               /**< array with columns of row entries */
+   SCIP_RATIONAL**       vals,               /**< array with coefficients of row entries */
+   SCIP_RATIONAL*        lhs,                /**< left hand side of row */
+   SCIP_RATIONAL*        rhs,                /**< right hand side of row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwExactCreate(rowexact, fprow, NULL, scip->mem->probmem, scip->set, scip->stat,
-         scip->lpexact, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, hasfprelaxation, (void*) sepa) );
+   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, len, cols, vals, lhs, rhs, isfprelaxable) );
 
    return SCIP_OKAY;
 }
@@ -279,7 +283,6 @@ SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPcreateRowExactFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             fprow               /**< corresponding fp approximation/relaxation */
@@ -289,6 +292,7 @@ SCIP_RETCODE SCIPcreateRowExactFromRow(
    assert(fprow->rowexact == NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowExactFromRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    SCIP_CALL( SCIProwExactCreateFromRow(fprow, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lpexact) );
 
    return SCIP_OKAY;
@@ -329,21 +333,29 @@ SCIP_RETCODE SCIPgenerateFpRowsFromRowExact(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-void SCIPgetRowSolFeasibilityExact(
+SCIP_RETCODE SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolFeasibilityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
-      SCIProwExactGetSolFeasibility(row, scip->set, scip->stat, sol, result);
+   {
+      SCIP_CALL( SCIProwExactGetSolFeasibility(row, scip->set, scip->stat, sol, result) );
+   }
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      SCIProwExactGetLPFeasibility(row, scip->set, scip->stat, scip->lpexact, result);
+   {
+      SCIP_CALL( SCIProwExactGetLPFeasibility(row, scip->set, scip->stat, scip->lpexact, result) );
+   }
    else
-      SCIProwExactGetPseudoFeasibility(row, scip->set, scip->stat, result);
+   {
+      SCIP_CALL( SCIProwExactGetPseudoFeasibility(row, scip->set, scip->stat, result) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns the activity of a row for the given primal solution
@@ -353,24 +365,47 @@ void SCIPgetRowSolFeasibilityExact(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-void SCIPgetRowSolActivityExact(
+SCIP_RETCODE SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             useexact,           /**< true if sol should be considered instead of sol */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
-      SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result);
+   {
+      SCIP_CALL( SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result) );
+   }
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      RatSet(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
+      SCIPrationalSetRational(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
    else
-      RatSet(result, SCIProwExactGetPseudoActivity(row, scip->stat));
+      SCIPrationalSetRational(result, SCIProwExactGetPseudoActivity(row, scip->stat));
+
+   return SCIP_OKAY;
 }
 
+/** returns the activity of a row for the given primal solution with running error analysis
+ *
+ *  @return the activitiy of a row for the given primal solution and the error bound of the activity; returns true on success
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Bool SCIPgetRowSolActivityWithErrorboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row,                /**< LP row */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            activity,           /**< the approximate activity */
+   SCIP_Real*            errorbound          /**< the error bound */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivityWithErrorboundExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIProwExactGetSolActivityWithErrorbound(row, scip->set, scip->stat, sol, activity, errorbound);
+}
 
 /** output exact row to file stream via the message handler system
  *
@@ -412,7 +447,7 @@ SCIP_RETCODE SCIPprintRowExact(
  */
 void SCIPgetLPExactObjval(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Rational*        result              /**< result pointer */
+   SCIP_RATIONAL*        result              /**< result pointer */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPExactObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -540,6 +575,36 @@ SCIP_Bool SCIPisExactDivePossible(
    return TRUE;
 }
 
+/** returns whether we are in exact diving mode
+ *
+ *  @return whether we are in exact diving mode.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Bool SCIPinExactDive(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPinExactDive", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return SCIPlpExactDiving(scip->lpexact);
+}
+
 /** quits exact LP diving and resets bounds and objective values of columns to the current node's values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -564,7 +629,6 @@ SCIP_RETCODE SCIPendExactDive(
       return SCIP_INVALIDCALL;
    }
 
-   /** @todo exip: adress problem when user calls `SCIPendDive` in between */
    /* end floating-point LP dive, see comment in SCIPstartExactDive() */
    SCIP_CALL( SCIPendDive(scip) );
 
@@ -603,7 +667,7 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
                                               *   limit was reached (or NULL, if not needed) */
    )
 {
-   SCIP_Rational* objval;
+   SCIP_RATIONAL* objval;
 
    assert(scip != NULL);
 
@@ -624,19 +688,19 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
 
    if( !(*lperror) )
    {
-      SCIP_CALL( RatCreateBuffer(scip->set->buffer, &objval) );
+      SCIP_CALL( SCIPrationalCreateBuffer(scip->set->buffer, &objval) );
       SCIPgetLPExactObjval(scip, objval);
 
       /* the LP is infeasible or the objective limit was reached */
       if( SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OBJLIMIT
          || (SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OPTIMAL &&
-            RatIsGE(objval, SCIPgetCutoffboundExact(scip))) )
+            SCIPrationalIsGE(objval, SCIPgetCutoffboundExact(scip))) )
       {
          if( cutoff != NULL )
             *cutoff = TRUE;
       }
 
-      RatFreeBuffer(scip->set->buffer, &objval);
+      SCIPrationalFreeBuffer(scip->set->buffer, &objval);
    }
 
    return SCIP_OKAY;
@@ -655,7 +719,7 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
 SCIP_RETCODE SCIPchgVarLbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    )
 {
    assert(scip != NULL);
@@ -687,7 +751,7 @@ SCIP_RETCODE SCIPchgVarLbExactDive(
 SCIP_RETCODE SCIPchgVarUbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_Rational*        newbound            /**< new value for bound */
+   SCIP_RATIONAL*        newbound            /**< new value for bound */
    )
 {
    assert(scip != NULL);
@@ -733,7 +797,7 @@ SCIP_RETCODE SCIPwriteLPexact(
    }
 
    /* we need a flushed lp to write the current lp */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(scip->sepastoreexact, scip->mem->probmem, scip->set, scip->lpexact, scip->eventqueue) );
+   SCIP_CALL( SCIPlpExactSyncLPs(scip->lpexact, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPlpExactFlush(scip->lpexact, scip->mem->probmem, scip->set, scip->eventqueue) );
 
    SCIP_CALL( SCIPlpExactWrite(scip->lpexact, filename) );

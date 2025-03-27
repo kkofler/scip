@@ -31,18 +31,15 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scip.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
-//#include "scip/struct_rational.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lpexact.h"
 #include "scip/scip_sol.h"
 #include "scip/set.h"
 #include "scip/sol.h"
-#include "scip/struct_scip.h"
 #include "scip/tree.h"
 
 #ifdef __cplusplus

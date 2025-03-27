@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -280,6 +280,7 @@ struct SCIP_Conshdlr
    SCIP_Bool             sepalpwasdelayed;   /**< was the LP separation method delayed at the last call? */
    SCIP_Bool             sepasolwasdelayed;  /**< was the SOL separation method delayed at the last call? */
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
+   SCIP_Bool             exact;              /**< is constraint handler safe to be used in exact solving mode? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
    SCIP_Bool             duringsepa;         /**< is the constraint handler currently performing separation? */
    SCIP_Bool             duringprop;         /**< is the constraint handler currently performing propagation? */

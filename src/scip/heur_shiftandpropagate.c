@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -202,7 +202,7 @@ SCIP_Bool varIsDiscrete(
    SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
    )
 {
-   return SCIPvarIsIntegral(var) && (SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT || !impliscontinuous);
+   return SCIPvarIsIntegral(var) && ( !impliscontinuous || !SCIPvarIsImpliedIntegral(var) );
 }
 
 /** returns whether a given column is counted as discrete, depending on the parameter impliscontinuous */
@@ -212,7 +212,7 @@ SCIP_Bool colIsDiscrete(
    SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
    )
 {
-   return SCIPcolIsIntegral(col) && (!impliscontinuous || SCIPvarGetType(SCIPcolGetVar(col)) != SCIP_VARTYPE_IMPLINT);
+   return SCIPcolIsIntegral(col) && (!impliscontinuous || !SCIPcolIsImpliedIntegral(col));
 }
 
 /** returns nonzero values and corresponding columns of given row */
@@ -1255,59 +1255,24 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
    SCIP_VAR* var2;
    SCIP_VARTYPE vartype1;
    SCIP_VARTYPE vartype2;
-   int key1;
-   int key2;
 
    col1 = (SCIP_COL*)elem1;
    col2 = (SCIP_COL*)elem2;
    var1 = SCIPcolGetVar(col1);
    var2 = SCIPcolGetVar(col2);
-   assert(var1 != NULL && var2 != NULL);
+   assert(var1 != NULL);
+   assert(var2 != NULL);
 
-   vartype1 = SCIPvarGetType(var1);
-   vartype2 = SCIPvarGetType(var2);
+   vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+   vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
-   switch (vartype1)
-   {
-      case SCIP_VARTYPE_BINARY:
-         key1 = 1;
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         key1 = 2;
-         break;
-      case SCIP_VARTYPE_IMPLINT:
-         key1 = 3;
-         break;
-      case SCIP_VARTYPE_CONTINUOUS:
-         key1 = 4;
-         break;
-      default:
-         key1 = -1;
-         SCIPerrorMessage("unknown variable type\n");
-         SCIPABORT();
-         break;
-   }
-   switch (vartype2)
-   {
-      case SCIP_VARTYPE_BINARY:
-         key2 = 1;
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         key2 = 2;
-         break;
-      case SCIP_VARTYPE_IMPLINT:
-         key2 = 3;
-         break;
-      case SCIP_VARTYPE_CONTINUOUS:
-         key2 = 4;
-         break;
-      default:
-         key2 = -1;
-         SCIPerrorMessage("unknown variable type\n");
-         SCIPABORT();
-         break;
-   }
-   return key1 - key2;
+   if( vartype1 < vartype2 )
+      return -1;
+   if( vartype1 > vartype2 )
+      return +1;
+
+   assert(vartype1 == vartype2);
+   return 0;
 }
 
 /*
@@ -1487,7 +1452,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
        * if we are not in exact solving mode
        */
-      if( cutoff && !SCIPisExactSolve(scip) )
+      if( cutoff && !SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
@@ -1544,10 +1509,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       if( varIsDiscrete(colvar, impliscontinuous) )
          ++ndiscvars;
-      if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(colvar) )
          ++nbinvars;
 #ifndef NDEBUG
-      else if( SCIPvarGetType(colvar) == SCIP_VARTYPE_INTEGER )
+      else if( SCIPvarGetType(colvar) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(colvar) )
          ++nintvars;
 #endif
 
@@ -2446,6 +2411,9 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecShiftandpropagate, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyShiftandpropagate) );

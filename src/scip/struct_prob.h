@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -48,7 +48,7 @@ extern "C" {
 struct SCIP_Prob
 {
    SCIP_Real             objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
-   SCIP_Rational*        objoffsetexact;     /**< exact objective offset from bound shifting and fixing (fixed vars result) */
+   SCIP_RATIONAL*        objoffsetexact;     /**< exact objective offset from bound shifting and fixing (fixed vars result) */
    SCIP_Real             objscale;           /**< scalar applied to objective function; external objective value is
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objlim;             /**< objective limit as external value (original problem space) */
@@ -72,7 +72,9 @@ struct SCIP_Prob
    int                   nvars;              /**< number of active variables in the problem (used slots in vars array) */
    int                   nbinvars;           /**< number of binary variables */
    int                   nintvars;           /**< number of general integer variables */
-   int                   nimplvars;          /**< number of implicit integer variables */
+   int                   nbinimplvars;       /**< number of binary implicit integer variables */
+   int                   nintimplvars;       /**< number of integer implicit integer variables */
+   int                   ncontimplvars;      /**< number of continuous implicit integer variables */
    int                   ncontvars;          /**< number of continuous variables */
    int                   ncolvars;           /**< number of variables with attached column information */
    int                   fixedvarssize;      /**< available slots in fixedvars array */

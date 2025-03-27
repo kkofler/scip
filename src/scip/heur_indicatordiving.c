@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -282,7 +282,7 @@ void checkAndGetVarbound(
    *cons = NULL;
    *isvarbound = FALSE;
 
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(cand) )
       return;
 
    *cons = (SCIP_CONS*) SCIPhashmapGetImage(map, cand);
@@ -424,7 +424,7 @@ SCIP_RETCODE varIsSemicontinuous(
     */
    for( c = 0; c < nvlbs; ++c )
    {
-      if( SCIPvarGetType(vlbvars[c]) != SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vlbvars[c]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vlbvars[c]) )
          continue;
 
       bvar = vlbvars[c];
@@ -467,7 +467,7 @@ SCIP_RETCODE varIsSemicontinuous(
    for( c = 0; c < nvubs; ++c )
    {
       /* coverity[var_deref_op] */
-      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY )  /*lint !e613*/
+      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vubvars[c]) )  /*lint !e613*/
          continue;
 
       bvar = vubvars[c];  /*lint !e613*/
@@ -677,7 +677,7 @@ void getScoreOfFarkasDiving(
    *score = REALABS(obj) + SCIPrandomGetReal(randnumgen, MIN_RAND, MAX_RAND);
 
    /* prefer decisions on binary variables */
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(cand) )
       *score = -1.0 / *score;
 }
 
@@ -738,7 +738,7 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving)
 
    /* create working data */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-   SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip) ));
+   SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip)) );
 
    heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
    heurdata->varboundconshdlr = SCIPfindConshdlr(scip, "varbound");
@@ -1143,6 +1143,9 @@ SCIP_RETCODE SCIPincludeHeurIndicatordiving(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecIndicatordiving, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyIndicatordiving) );

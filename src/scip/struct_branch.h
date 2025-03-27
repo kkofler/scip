@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -107,7 +107,7 @@ struct SCIP_Branchrule
    int                   maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    SCIP_Bool             initialized;        /**< is branching rule initialized? */
    SCIP_Bool             isobjbranchrule;    /**< is branching rule an obj branching rule? */
-   SCIP_Bool             isexact;            /**< is the safe to use in exact solving mode */
+   SCIP_Bool             exact;              /**< is branching rule safe to use in exact solving mode? */
 };
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2198,19 +2198,19 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integrality != NULL);
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
-   *isintegral = EPSISINT(exprdata->coefficient, 0.0); /*lint !e835*/
+   *integrality = EPSISINT(exprdata->coefficient, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE; /*lint !e835*/
 
-   for( i = 0; i < SCIPexprGetNChildren(expr) && *isintegral; ++i )
+   for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality != SCIP_IMPLINTTYPE_NONE; ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
 
-      *isintegral = SCIPexprIsIntegral(child);
+      *integrality = MIN(*integrality, SCIPexprGetIntegrality(child)); /*lint !e666*/
    }
 
    return SCIP_OKAY;

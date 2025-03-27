@@ -31,7 +31,6 @@ set(scipsources
     scip/bandit_exp3.c
     scip/bandit_exp3ix.c
     scip/bandit_ucb.c
-    scip/bounding_exact.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -62,7 +61,7 @@ set(scipsources
     scip/cons_countsols.c
     scip/cons_cumulative.c
     scip/cons_disjunction.c
-    scip/cons_exactlp.c
+    scip/cons_exactlinear.c
     scip/cons_exactsol.c
     scip/cons_fixedvar.c
     scip/cons_indicator.c
@@ -75,6 +74,8 @@ set(scipsources
     scip/cons_or.c
     scip/cons_orbisack.c
     scip/cons_orbitope.c
+    scip/cons_orbitope_full.c
+    scip/cons_orbitope_pp.c
     scip/cons_pseudoboolean.c
     scip/cons_quadratic.c
     scip/cons_setppc.c
@@ -171,6 +172,7 @@ set(scipsources
     scip/heur_zeroobj.c
     scip/heur_zirounding.c
     scip/hypergraph.c
+    scip/iisfinder_greedy.c
     scip/message_default.c
     scip/network.c
     scip/nlhdlr_bilinear.c
@@ -279,7 +281,6 @@ set(scipsources
     scip/bendersdefcuts.c
     scip/boundstore.c
     scip/branch.c
-    scip/branchexact.c
     scip/clock.c
     scip/concsolver.c
     scip/concurrent.c
@@ -303,12 +304,14 @@ set(scipsources
     scip/heuristics.c
     scip/compr.c
     scip/history.c
+    scip/iisfinder.c
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
     scip/lapack_calls.c
     scip/lp.c
     scip/lpexact.c
+    scip/lpexact_bounding.c
     scip/matrix.c
     scip/mem.c
     scip/misc.c
@@ -343,6 +346,7 @@ set(scipsources
     scip/scip_cut.c
     scip/scip_cutsel.c
     scip/scip_datastructures.c
+    scip/scip_datatree.c
     scip/scip_debug.c
     scip/scip_dcmp.c
     scip/scip_dialog.c
@@ -352,6 +356,7 @@ set(scipsources
     scip/scip_expr.c
     scip/scip_general.c
     scip/scip_heur.c
+    scip/scip_iisfinder.c
     scip/scip_lp.c
     scip/scip_lpexact.c
     scip/scip_mem.c
@@ -379,6 +384,7 @@ set(scipsources
     scip/scip_tree.c
     scip/scip_validation.c
     scip/scip_var.c
+    scip/datatree.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c
@@ -419,6 +425,7 @@ set(objscipsources
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
     objscip/objheur.cpp
+    objscip/objiisfinder.cpp
     objscip/objmessagehdlr.cpp
     objscip/objnodesel.cpp
     objscip/objpresol.cpp
@@ -485,6 +492,7 @@ set(objscipheaders
     objscip/objdisp.h
     objscip/objeventhdlr.h
     objscip/objheur.h
+    objscip/objiisfinder.h
     objscip/objmessagehdlr.h
     objscip/objnodesel.h
     objscip/objpresol.h
@@ -520,14 +528,12 @@ set(scipheaders
     scip/bendersdefcuts.h
     scip/bitencode.h
     scip/boundstore.h
-    scip/bounding_exact.h
     scip/branch_allfullstrong.h
     scip/branch_cloud.h
     scip/branch_distribution.h
     scip/branch_fullstrong.h
     scip/branch_gomory.h
     scip/branch.h
-    scip/branchexact.h
     scip/branch_inference.h
     scip/branch_leastinf.h
     scip/branch_lookahead.h
@@ -562,7 +568,7 @@ set(scipheaders
     scip/cons_countsols.h
     scip/cons_cumulative.h
     scip/cons_disjunction.h
-    scip/cons_exactlp.h
+    scip/cons_exactlinear.h
     scip/cons_exactsol.h
     scip/cons_fixedvar.h
     scip/cons.h
@@ -575,6 +581,8 @@ set(scipheaders
     scip/cons_nonlinear.h
     scip/cons_orbisack.h
     scip/cons_orbitope.h
+    scip/cons_orbitope_full.h
+    scip/cons_orbitope_pp.h
     scip/cons_or.h
     scip/cons_pseudoboolean.h
     scip/cons_quadratic.h
@@ -685,12 +693,15 @@ set(scipheaders
     scip/heur_zirounding.h
     scip/history.h
     scip/hypergraph.h
+    scip/iisfinder.h
+    scip/iisfinder_greedy.h
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
     scip/lapack_calls.h
     scip/lp.h
     scip/lpexact.h
+    scip/lpexact_bounding.h
     scip/mem.h
     scip/message_default.h
     scip/message.h
@@ -770,6 +781,7 @@ set(scipheaders
     scip/pub_cons.h
     scip/pub_cutpool.h
     scip/pub_cutsel.h
+    scip/pub_datatree.h
     scip/pub_dcmp.h
     scip/pub_dialog.h
     scip/pub_disp.h
@@ -778,8 +790,10 @@ set(scipheaders
     scip/pub_fileio.h
     scip/pub_heur.h
     scip/pub_history.h
+    scip/pub_iisfinder.h
     scip/pub_implics.h
     scip/pub_lp.h
+    scip/pub_lpexact.h
     scip/pub_matrix.h
     scip/pub_message.h
     scip/pub_misc.h
@@ -852,6 +866,7 @@ set(scipheaders
     scip/scip_cut.h
     scip/scip_cutsel.h
     scip/scip_datastructures.h
+    scip/scip_datatree.h
     scip/scip_debug.h
     scip/scip_dcmp.h
     scip/scip_dialog.h
@@ -861,6 +876,7 @@ set(scipheaders
     scip/scip_expr.h
     scip/scip_general.h
     scip/scip_heur.h
+    scip/scip_iisfinder.h
     scip/scip_lp.h
     scip/scip_lpexact.h
     scip/scip_mem.h
@@ -931,6 +947,7 @@ set(scipheaders
     scip/struct_cutpool.h
     scip/struct_cuts.h
     scip/struct_cutsel.h
+    scip/struct_datatree.h
     scip/struct_dcmp.h
     scip/struct_dialog.h
     scip/struct_disp.h
@@ -939,6 +956,7 @@ set(scipheaders
     scip/struct_heur.h
     scip/struct_history.h
     scip/struct_hypergraph.h
+    scip/struct_iisfinder.h
     scip/struct_implics.h
     scip/struct_lp.h
     scip/struct_lpexact.h
@@ -972,6 +990,7 @@ set(scipheaders
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
+    scip/datatree.h
     scip/symmetry.h
     scip/symmetry_graph.h
     scip/symmetry_orbitopal.h
@@ -997,6 +1016,7 @@ set(scipheaders
     scip/type_cutpool.h
     scip/type_cuts.h
     scip/type_cutsel.h
+    scip/type_datatree.h
     scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h
@@ -1006,6 +1026,7 @@ set(scipheaders
     scip/type_heur.h
     scip/type_history.h
     scip/type_hypergraph.h
+    scip/type_iisfinder.h
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h
@@ -1048,7 +1069,7 @@ set(scipheaders
 )
 
 set(symheaders
-  symmetry/build_sassy_graph.h
+  symmetry/build_dejavu_graph.h
   symmetry/compute_symmetry.h
   symmetry/struct_symmetry.h
   symmetry/type_symmetry.h
@@ -1156,13 +1177,12 @@ include(GenerateExportHeader)
 generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${PROJECT_BINARY_DIR}/scip/scip_export.h)
 target_compile_definitions(scip PRIVATE SCIP_STATIC_DEFINE)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    if (SANITIZE_ADDRESS OR SANITIZE_MEMORY OR SANITIZE_THREAD OR
-        SANITIZE_UNDEFINED)
-       find_package(Sanitizers)
-       add_sanitizers(scip)
-    endif()
-endif()
+if(SANITIZE)
+    find_package(Sanitizers)
+    add_sanitizers(libscip)
+    add_sanitizers(scip)
+    get_target_property(CONF_SANITIZE_FLAGS libscip SANITIZE_FLAGS)
+endif(SANITIZE)
 
 target_link_libraries(scip
     PUBLIC
@@ -1183,7 +1203,7 @@ add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
 
 set_target_properties(libscip PROPERTIES
-    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
     INSTALL_RPATH_USE_LINK_PATH TRUE
     CXX_VISIBILITY_PRESET hidden
@@ -1234,7 +1254,9 @@ if(ZIMPL_NEEDED)
     get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
-# configure the config file for the build tree
+# Configure scip-config.cmake for the build-tree:
+# We add the CMake module path from the sources.
+set(EXTRA_CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${PROJECT_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)
@@ -1246,7 +1268,9 @@ ${PROJECT_BINARY_DIR}/scip-config-version.cmake
     COMPATIBILITY SameMajorVersion
     )
 
-# configure the config file for the installation
+# Configure the scip-config.cmake for the installation.
+# We add the current directory of the installed scip-config.cmake as a CMake module path.
+set(EXTRA_CMAKE_MODULE_PATH "\${CMAKE_CURRENT_LIST_DIR}")
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
 if(SOPLEX_NEEDED)
     set(CONF_SOPLEX_DIR "\${CMAKE_CURRENT_LIST_DIR}/../soplex")
@@ -1263,3 +1287,16 @@ install(EXPORT scip-targets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
 install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
               ${PROJECT_BINARY_DIR}/scip-config-version.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
+
+# Install FindGMP.cmake module.
+if(SCIP_WITH_GMP)
+   install(FILES ${PROJECT_SOURCE_DIR}/cmake/Modules/FindGMP.cmake
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
+endif()
+
+# Install FindMPFR.cmake module.
+if(SCIP_WITH_MPFR)
+   install(FILES ${PROJECT_SOURCE_DIR}/cmake/Modules/FindMPFR.cmake
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
+endif()
+

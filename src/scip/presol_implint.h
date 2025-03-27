@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -28,7 +28,7 @@
  * @author Rolf van der Hulst
  *
  * This presolver looks for implicit integer variables, which are variables whose integrality is implied.
- * The linear constraint handler handles the simple (primal) case such as 2x + 2y + z = 3, where z is implied integer by
+ * The linear constraint handler handles the simple (primal) case such as 2x + 2y + z = 3, where z is implied integral by
  * x and y. It also handles a more complicated dual case, where we have 'dual' implied integrality if z occurs only in
  * inequalities of the primal form (where the equality becomes an inequality), and has integral bounds.
  *
@@ -45,7 +45,7 @@
  * \f]
  * where A and c are integral and B is totally unimodular. It is not difficult to see that after fixing the x variables,
  * that the remaining problem on the y variables is an integral polyhedron (and independent of the z variables).
- * Hence, y is implied integer by x.
+ * Hence, y is implied integral by x.
  *
  * Note that this presolver only treats integral rows, where SCIPisIntegral() is used to check integrality.
  */

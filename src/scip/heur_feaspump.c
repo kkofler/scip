@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -158,6 +158,7 @@ SCIP_RETCODE setupProbingSCIP(
    /* copy SCIP instance */
    SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE,
          FALSE, TRUE, success) );
+   assert(!SCIPisExact(*probingscip));
 
    if( copycuts )
    {
@@ -219,7 +220,12 @@ SCIP_RETCODE setupSCIPparamsStage3(
    SCIP*                 probingscip         /**< sub-SCIP data structure  */
    )
 {
+   /**@todo restore the copied settings that were changed in setupSCIPparamsFP2() without copying all parameters, since
+    *       this triggers an error message that exact solving cannot be enabled/disabled in or after problem creation stage
+    */
    SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
+   assert(!SCIPisExact(probingscip));
+
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
 
@@ -524,7 +530,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
       if( consvars[nconsvars] == NULL )
          continue;
       SCIP_CALL( SCIPchgVarObj(probingscip, consvars[nconsvars], consvals[nconsvars]) );
-      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY );
+      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(consvars[nconsvars]) );
       ++nconsvars;
    }
 
@@ -1002,7 +1008,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          {
             frac = SCIPfeasFrac(scip, SCIPvarGetLPSol(pseudocands[i]));
             pseudocandsfrac[i] = MIN(frac, 1.0-frac); /* always a number between 0 and 0.5 */
-            if( SCIPvarGetType(pseudocands[i]) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(pseudocands[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(pseudocands[i]) )
                pseudocandsfrac[i] -= 10.0; /* binaries always come first */
          }
          SCIPsortRealPtr(pseudocandsfrac, (void**)pseudocands, npseudocands);
@@ -1248,7 +1254,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
 
       /* in exact mode we have to end diving prior to trying the solution */
-      if( SCIPisExactSolve(scip) )
+      if( SCIPisExact(scip) )
       {
          SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
          SCIP_CALL( SCIPendDive(scip) );
@@ -1396,6 +1402,9 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecFeaspump, heurdata) );
 
    assert(heur != NULL);
+
+   /* primal heuristic is safe to use in exact solving mode */
+   SCIPheurMarkExact(heur);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyFeaspump) );

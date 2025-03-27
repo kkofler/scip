@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -74,8 +74,8 @@ struct SCIP_EventObjChg
 {
    SCIP_Real             oldobj;             /**< old objective value before value changed */
    SCIP_Real             newobj;             /**< new objective value after value changed */
-   SCIP_Rational*        oldobjexact;        /**< exact old obj (NULL if not an exact change) */
-   SCIP_Rational*        newobjexact;        /**< exact new obj (NULL if not an exact change) */
+   SCIP_RATIONAL*        oldobjexact;        /**< exact old obj (NULL if not an exact change) */
+   SCIP_RATIONAL*        newobjexact;        /**< exact new obj (NULL if not an exact change) */
    SCIP_VAR*             var;                /**< variable whose objective value changed */
 };
 
@@ -84,8 +84,8 @@ struct SCIP_EventBdChg
 {
    SCIP_Real             oldbound;           /**< old bound before bound changed */
    SCIP_Real             newbound;           /**< new bound after bound changed */
-   SCIP_Rational*        oldboundexact;      /**< exact old variable bound (NULL if not an exact change) */
-   SCIP_Rational*        newboundexact;      /**< exact new variable bound (NULL if not an exact change) */
+   SCIP_RATIONAL*        oldboundexact;      /**< exact old variable bound (NULL if not an exact change) */
+   SCIP_RATIONAL*        newboundexact;      /**< exact new variable bound (NULL if not an exact change) */
    SCIP_VAR*             var;                /**< variable whose bound changed */
 };
 
@@ -108,6 +108,14 @@ struct SCIP_EventTypeChg
 {
    SCIP_VARTYPE          oldtype;            /**< old variable type */
    SCIP_VARTYPE          newtype;            /**< new variable type */
+   SCIP_VAR*             var;                /**< variable whose type changed */
+};
+
+/** data for variable implied type change events */
+struct SCIP_EventImplTypeChg
+{
+   SCIP_IMPLINTTYPE      oldtype;            /**< old variable implied type */
+   SCIP_IMPLINTTYPE      newtype;            /**< new variable implied type */
    SCIP_VAR*             var;                /**< variable whose type changed */
 };
 
@@ -175,6 +183,7 @@ struct SCIP_Event
       SCIP_EVENTHOLE     eventhole;           /**< data for domain hole events */
       SCIP_EVENTIMPLADD  eventimpladd;        /**< data for implication added events */
       SCIP_EVENTTYPECHG  eventtypechg;        /**< data for variable type change events */
+      SCIP_EVENTTYPEIMPLCHG eventimpltypechg; /**< data for variable implied type change events */
       SCIP_EVENTROWADDEDSEPA eventrowaddedsepa; /**< data for row addition to separation storage events */
       SCIP_EVENTROWDELETEDSEPA eventrowdeletedsepa; /**< data for row deletion from separation storage events */
       SCIP_EVENTROWADDEDLP eventrowaddedlp;   /**< data for row addition to LP events */

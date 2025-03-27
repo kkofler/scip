@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -66,7 +66,6 @@ SCIP_RETCODE SCIPstatCreate(
    assert(set != NULL);
 
    SCIP_ALLOC( BMSallocMemory(stat) );
-   SCIP_CALL( SCIPclockCreate(&(*stat)->exactproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -127,7 +126,6 @@ SCIP_RETCODE SCIPstatFree(
    assert(stat != NULL);
    assert(*stat != NULL);
 
-   SCIPclockFree(&(*stat)->exactproptime);
    SCIPclockFree(&(*stat)->solvingtime);
    SCIPclockFree(&(*stat)->solvingtimeoverall);
    SCIPclockFree(&(*stat)->presolvingtime);
@@ -686,10 +684,6 @@ void SCIPstatResetCurrentRun(
    stat->boundingerrorbs = 0;
    stat->boundingerrorps = 0;
    stat->boundingerrorexlp = 0;
-   stat->ncallsexactsol = 0;
-   stat->nfoundexactsol = 0;
-   stat->timefailexactsol = 0;
-   stat->timesuccessexactsol = 0;
    stat->lastbranchvar = NULL;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;

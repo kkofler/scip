@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -250,9 +250,9 @@ SCIP_RETCODE SCIPsolveSlack(
       int d;
       for(d = 0; d < vargroupsizes[c]; d++)
       {
-         if( SCIP_VARTYPE_BINARY == SCIPvarGetType(vargroups[c][d]) )
+         if( SCIPvarGetType(vargroups[c][d]) == SCIP_VARTYPE_BINARY )
          {
-            SCIPerrorMessage("method <SCIPsolveSlack> cannot relaxe binary variables.\n");
+            SCIPerrorMessage("method <SCIPsolveSlack> cannot relax binary variables.\n");
             return SCIP_INVALIDCALL;
          }
       }
@@ -1024,7 +1024,7 @@ SCIP_RETCODE testslack(
    nusedvars = 0;
    for (c = 0; c < nvars; ++c)
    {
-      if ( SCIP_VARTYPE_BINARY != SCIPvarGetType(vars[c]) )
+      if( SCIPvarGetType(vars[c]) != SCIP_VARTYPE_BINARY )
       {
          usedvars[nusedvars] = vars[c];
          nusedvars++;

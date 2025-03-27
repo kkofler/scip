@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -77,7 +77,7 @@
 #include "scip/prop_symmetry.h"
 #include "symmetry/struct_symmetry.h"
 #include "scip/pub_misc_sort.h"
-
+#include "scip/scip_datatree.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -863,7 +863,7 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
    assert(lb <= ub);  /* SCIP should ensure that variable bounds are not contradicting */
 
    /* implicit integer variables may have non-integer bounds, apparently (run space25a) */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+   if( SCIPvarIsImpliedIntegral(var) )
    {
       lb = EPSROUND(lb, 0.0); /*lint !e835*/
       ub = EPSROUND(ub, 0.0); /*lint !e835*/
@@ -985,7 +985,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIP_Bool boundtightened = FALSE;
 
    eventtype = SCIPeventGetType(event);
-   assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED));
+   assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED));
 
    assert(eventdata != NULL);
    expr = (SCIP_EXPR*) eventdata;
@@ -1020,8 +1020,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
     * (mainly to avoid a failing assert, see github issue #70)
     * usually, a change to implicit-integer would result in a boundchange on the variable as well, but not if the bound was already almost integral
     */
-   if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) && (SCIPeventGetNewtype(event) == SCIP_VARTYPE_IMPLINT) &&
-      (!EPSISINT(SCIPvarGetLbGlobal(SCIPeventGetVar(event)), 0.0) || !EPSISINT(SCIPvarGetUbGlobal(SCIPeventGetVar(event)), 0.0)) ) /*lint !e835*/
+   if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED) && SCIPeventGetNewImpltype(event) != SCIP_IMPLINTTYPE_NONE
+      && ( !EPSISINT(SCIPvarGetLbGlobal(SCIPeventGetVar(event)), 0.0) /*lint !e835*/
+      || !EPSISINT(SCIPvarGetUbGlobal(SCIPeventGetVar(event)), 0.0) ) ) /*lint !e835*/
       boundtightened = TRUE;
 
    /* notify constraints that use this variable expression (expr) to repropagate and possibly resimplify
@@ -1137,7 +1138,7 @@ SCIP_RETCODE catchVarEvent(
 
       assert(ownerdata->nconss == 1);
 
-      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED;
+      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED;
 
       SCIP_CALL( SCIPcatchVarEvent(scip, SCIPgetVarExprVar(expr), eventtype, eventhdlr, (SCIP_EVENTDATA*)expr, &ownerdata->filterpos) );
       assert(ownerdata->filterpos >= 0);
@@ -1269,7 +1270,7 @@ SCIP_RETCODE dropVarEvent(
 
       assert(ownerdata->filterpos >= 0);
 
-      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED;
+      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED;
 
       SCIP_CALL( SCIPdropVarEvent(scip, SCIPgetVarExprVar(expr), eventtype, eventhdlr, (SCIP_EVENTDATA*)expr, ownerdata->filterpos) );
       ownerdata->filterpos = -1;
@@ -2392,7 +2393,8 @@ SCIP_RETCODE forwardPropExpr(
              * boundtightening-inteval does not relax integer variables, so can omit expressions without children
              * (constants should be ok, too)
              */
-            if( SCIPexprIsIntegral(expr) && conshdlrdata->intevalvar == intEvalVarBoundTightening && SCIPexprGetNChildren(expr) > 0 )
+            if( SCIPexprIsIntegral(expr) &&
+                conshdlrdata->intevalvar == intEvalVarBoundTightening && SCIPexprGetNChildren(expr) > 0 )
             {
                if( activity.inf > -SCIP_INTERVAL_INFINITY )
                   activity.inf = SCIPceil(scip, activity.inf);
@@ -3172,16 +3174,16 @@ SCIP_RETCODE addLocks(
    /* compute locks for lock propagation */
    if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos + nlocksneg, nlockspos + nlocksneg));
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
    else if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos, nlocksneg));
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos, nlocksneg) );
    }
    else
    {
       assert(!SCIPisInfinity(scip, -consdata->lhs));
-      SCIP_CALL( propagateLocks(scip, consdata->expr, nlocksneg, nlockspos));
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;
@@ -3797,8 +3799,6 @@ SCIP_Bool isBinaryProduct(
    {
       SCIP_EXPR* child;
       SCIP_VAR* var;
-      SCIP_Real ub;
-      SCIP_Real lb;
 
       child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
@@ -3807,11 +3807,12 @@ SCIP_Bool isBinaryProduct(
          return FALSE;
 
       var = SCIPgetVarExprVar(child);
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
 
-      /* check whether variable is integer and has [0,1] as variable bounds */
-      if( !SCIPvarIsIntegral(var) || !SCIPisEQ(scip, lb, 0.0) || !SCIPisEQ(scip, ub, 1.0) )
+      /* check whether variable is binary, in any feasible solution */
+      /* TODO allow for weak implicit binary vars, but then auxiliary variables created in
+       * reformulateFactorizedBinaryQuadratic() and getBinaryProductExprDo() need to be weakly implied integral
+       */
+      if( !SCIPvarIsBinary(var) || SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_WEAK )
          return FALSE;
    }
 
@@ -3886,7 +3887,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    SCIP_CONS* newcons;
    SCIP_Real minact = 0.0;
    SCIP_Real maxact = 0.0;
-   SCIP_Bool integral = TRUE;
+   SCIP_IMPLINTTYPE impltype = SCIP_IMPLINTTYPE_STRONG;
    char name [SCIP_MAXSTRLEN];
    int i;
 
@@ -3901,13 +3902,21 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    {
       minact += MIN(coefs[i], 0.0);
       maxact += MAX(coefs[i], 0.0);
-      integral = integral && SCIPisIntegral(scip, coefs[i]);
+      assert(SCIPvarIsIntegral(vars[i]));
+      if( impltype != SCIP_IMPLINTTYPE_NONE )
+      {
+         if( !SCIPisIntegral(scip, coefs[i]) )
+            impltype = SCIP_IMPLINTTYPE_NONE;
+         else if( SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
+            impltype = SCIP_IMPLINTTYPE_WEAK;
+      }
    }
    assert(minact <= maxact);
 
    /* create and add auxiliary variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(facvar));
-   SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, name, minact, maxact, 0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarImpl(scip, &auxvar, name, minact, maxact, 0.0, SCIP_VARTYPE_CONTINUOUS, impltype,
+         TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -4234,7 +4243,9 @@ SCIP_RETCODE getBinaryProductExprDo(
    }
 
    /* create and add variable */
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
+   SCIP_CALL( SCIPcreateVarImpl(scip, &w, name, 0.0, 1.0, 0.0,
+         SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_STRONG,
+         TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
 
@@ -5536,7 +5547,7 @@ SCIP_Bool isSingleLockedCand(
       && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == ownerdata->nlockspos
       && ownerdata->nconss == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
       && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
-      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
+      && ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
       && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 }
 
@@ -5736,7 +5747,7 @@ SCIP_RETCODE presolveSingleLockedVars(
          /* try to change the variable type to binary */
          if( conshdlrdata->checkvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
          {
-            assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+            assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var));
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
             ++(*nchgvartypes);
 
@@ -5797,8 +5808,8 @@ SCIP_RETCODE presolveImplint(
 
    *infeasible = FALSE;
 
-   /* nothing can be done if there are no binary and integer variables available */
-   if( SCIPgetNBinVars(scip) == 0 && SCIPgetNIntVars(scip) == 0 )
+   /* nothing can be done on purley continuous problem */
+   if( SCIPgetNVars(scip) == SCIPgetNContVars(scip) )
       return SCIP_OKAY;
 
    /* no continuous var can be made implicit-integer if there are no continuous variables */
@@ -5814,6 +5825,7 @@ SCIP_RETCODE presolveImplint(
       SCIP_EXPR* cand = NULL;
       SCIP_Real candcoef = 0.0;
       int i;
+      SCIP_IMPLINTTYPE impltype;
 
       assert(conss != NULL && conss[c] != NULL);
 
@@ -5861,14 +5873,17 @@ SCIP_RETCODE presolveImplint(
       if( cand == NULL )
          continue;
 
+      impltype = SCIP_IMPLINTTYPE_STRONG;
+
       /* check whether all other coefficients are integral when diving by candcoef and all other children are integral */
       for( i = 0; i < nchildren; ++i )
       {
          if( children[i] == cand )
             continue;
 
+         impltype = MIN(impltype, SCIPexprGetIntegrality(children[i]));
          /* child i must be integral */
-         if( !SCIPexprIsIntegral(children[i]) )
+         if( impltype == SCIP_IMPLINTTYPE_NONE )
          {
             cand = NULL;
             break;
@@ -5889,13 +5904,16 @@ SCIP_RETCODE presolveImplint(
          SCIPvarGetName(SCIPgetVarExprVar(cand)), SCIPconsGetName(conss[c]));
 
       /* change variable type */
-      SCIP_CALL( SCIPchgVarType(scip, SCIPgetVarExprVar(cand), SCIP_VARTYPE_IMPLINT, infeasible) );
+      assert(impltype != SCIP_IMPLINTTYPE_NONE);
+
+      SCIP_CALL( SCIPchgVarImplType(scip, SCIPgetVarExprVar(cand), impltype, infeasible) );
+      ++(*nchgvartypes);
 
       if( *infeasible )
          return SCIP_OKAY;
 
       /* mark expression as being integral (as would be done by expr_var.c in the next round of updating integrality info) */
-      SCIPexprSetIntegrality(cand, TRUE);
+      SCIPexprSetIntegrality(cand, impltype);
    }
 
    return SCIP_OKAY;
@@ -5914,7 +5932,7 @@ SCIP_RETCODE createAuxVar(
 {
    SCIP_EXPR_OWNERDATA* ownerdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_VARTYPE vartype;
+   SCIP_IMPLINTTYPE impltype;
    SCIP_INTERVAL activity;
    char name[SCIP_MAXSTRLEN];
 
@@ -5954,7 +5972,7 @@ SCIP_RETCODE createAuxVar(
    ++conshdlrdata->auxvarid;
 
    /* type of auxiliary variable depends on integrality information of the expression */
-   vartype = SCIPexprIsIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
+   impltype = SCIPexprGetIntegrality(expr);
 
    /* get activity of expression to initialize variable bounds, if something valid is available (evalActivity was called in initSepa) */
    if( SCIPexprGetActivityTag(expr) >= conshdlrdata->lastboundrelax )
@@ -5978,11 +5996,16 @@ SCIP_RETCODE createAuxVar(
     */
    if( SCIPgetDepth(scip) == 0 )
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &ownerdata->auxvar, name, MAX(-SCIPinfinity(scip), activity.inf), MIN(SCIPinfinity(scip), activity.sup), 0.0, vartype) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &ownerdata->auxvar, name,
+            MAX(-SCIPinfinity(scip), activity.inf), MIN(SCIPinfinity(scip), activity.sup), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, impltype,
+            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &ownerdata->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, vartype) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &ownerdata->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, impltype,
+            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
 
    /* mark the auxiliary variable to be added for the relaxation only
@@ -6926,7 +6949,7 @@ void scoreBranchingCandidates(
          maxscore.auxviol = MAX(maxscore.auxviol, cands[c].auxviol);
       }
 
-      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarGetType(cands[c].var) <= SCIP_VARTYPE_INTEGER )
+      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarIsNonimpliedIntegral(cands[c].var) )
       {
          /* when collecting for branching on fractionality (cands[c].expr == NULL), only fractional integer variables
           * should appear as candidates here and their fractionality should have been recorded in branchingIntegralOrNonlinear
@@ -7012,7 +7035,7 @@ void scoreBranchingCandidates(
                 * this should be consistent with the way how pseudo-costs are updated in the core, which is decided by
                 * branching/lpgainnormalize for continuous variables and move in LP-value for non-continuous variables
                 */
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(var) )
                   strategy = conshdlrdata->branchpscostupdatestrategy;
                else
                   strategy = 'l';
@@ -7130,21 +7153,28 @@ void scoreBranchingCandidates(
 
       if( conshdlrdata->branchvartypeweight > 0.0 )
       {
-         switch( SCIPvarGetType(cands[c].var) )
+         if( SCIPvarIsImpliedIntegral(cands[c].var) )
+            cands[c].vartype = 0.01;
+         else
          {
-            case SCIP_VARTYPE_BINARY :
-               cands[c].vartype = 1.0;
-               break;
-            case SCIP_VARTYPE_INTEGER :
-               cands[c].vartype = 0.1;
-               break;
-            case SCIP_VARTYPE_IMPLINT :
-               cands[c].vartype = 0.01;
-               break;
-            case SCIP_VARTYPE_CONTINUOUS :
-            default:
-               cands[c].vartype = 0.0;
+            switch( SCIPvarGetType(cands[c].var) )
+            {
+               case SCIP_VARTYPE_BINARY:
+                  cands[c].vartype = 1.0;
+                  break;
+               case SCIP_VARTYPE_INTEGER:
+                  cands[c].vartype = 0.1;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+                  cands[c].vartype = 0.0;
+                  break;
+               default:
+                  SCIPerrorMessage("invalid variable type\n");
+                  SCIPABORT();
+                  return; /*lint !e527*/
+            } /*lint !e788*/
          }
+
          maxscore.vartype = MAX(cands[c].vartype, maxscore.vartype);
       }
    }
@@ -7254,7 +7284,7 @@ SCIP_RETCODE selectBranchingCandidate(
    SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
    SCIP_SOL*             sol,                /**< relaxation solution, NULL for LP */
    BRANCHCAND**          selected            /**< buffer to store selected branching candidates */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    int* perm;
@@ -8072,7 +8102,7 @@ SCIP_RETCODE branchingIntegralOrNonlinear(
    for( c = 0; c < nlpcands; ++c )
    {
       assert(ncands < SCIPgetNVars(scip) + SCIPgetNLPBranchCands(scip));
-      assert(SCIPvarGetType(lpcands[c]) <= SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarIsNonimpliedIntegral(lpcands[c]));
       cands[ncands].expr = NULL;
       cands[ncands].var = lpcands[c];
       cands[ncands].auxviol = 0.0;
@@ -8111,7 +8141,7 @@ SCIP_Bool branchingIntegralFirst(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SOL*             sol                 /**< solution to be enforced */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -12256,7 +12286,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphNonlinear)
    return SCIP_OKAY;
 }
 
-/** output method of statistics table to output file stream 'file' */
+/** output method of cons_nonlinear statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
 { /*lint --e{715}*/
@@ -12286,7 +12316,37 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
    return SCIP_OKAY;
 }
 
-/** output method of statistics table to output file stream 'file' */
+/** collect method of cons_nonlinear statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectNonlinear)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(table != NULL);
+   assert(datatree != NULL);
+
+   /* Find the constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* Insert statistics */
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "nweakseparation", conshdlrdata->nweaksepa) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "ntightenlp", conshdlrdata->ntightenlp) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "ndesperatetightenlp", conshdlrdata->ndesperatetightenlp) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "ndesperatebranch", conshdlrdata->ndesperatebranch) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "ndesperatecutoff", conshdlrdata->ndesperatecutoff) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "nforcelp", conshdlrdata->nforcelp) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "canonicalizationtime", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime)) );
+
+   return SCIP_OKAY;
+}
+
+/** output method of nlhdlr statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputNlhdlr)
 { /*lint --e{715}*/
@@ -12305,6 +12365,29 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNlhdlr)
 
    /* print statistics for nonlinear handlers */
    SCIPnlhdlrPrintStatistics(scip, conshdlrdata->nlhdlrs, conshdlrdata->nnlhdlrs, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of nlhdlr statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectNlhdlr)
+{ /*lint --e{715}*/
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* skip nlhdlr table if there never were active nonlinear constraints */
+   if( SCIPconshdlrGetMaxNActiveConss(conshdlr) == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* collect statistics for nonlinear handlers */
+   SCIP_CALL( SCIPnlhdlrCollectStatistics(scip, conshdlrdata->nlhdlrs, conshdlrdata->nnlhdlrs, datatree) );
 
    return SCIP_OKAY;
 }
@@ -12561,12 +12644,12 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    /* include tables for statistics */
    assert(SCIPfindTable(scip, TABLE_NAME_NONLINEAR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NONLINEAR, TABLE_DESC_NONLINEAR, FALSE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNonlinear,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNonlinear, tableCollectNonlinear,
          NULL, TABLE_POSITION_NONLINEAR, TABLE_EARLIEST_STAGE_NONLINEAR) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_NLHDLR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLHDLR, TABLE_DESC_NLHDLR, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNlhdlr,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNlhdlr, tableCollectNlhdlr,
          NULL, TABLE_POSITION_NLHDLR, TABLE_EARLIEST_STAGE_NLHDLR) );
 
    /* create, include, and release display nlhdlrs dialog */

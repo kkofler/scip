@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -159,7 +159,7 @@ fi
 # check if the test run should be processed in a debug tool environment
 if test "${DEBUGTOOL}" = "valgrind"
 then
-    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --suppressions=${SCIPPATH}/../suppressions.valgrind "
+    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --num-callers=20 --suppressions=${SCIPPATH}/../suppressions.valgrind "
 elif test "${DEBUGTOOL}" = "rr"
 then
     DEBUGTOOLCMD="rr record --chaos -o RRTRACEFOLDER_PLACEHOLDER.rr "

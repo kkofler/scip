@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -355,9 +355,16 @@ SCIP_DECL_EXPRINTEGRALITY(integralityVar)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integrality != NULL);
 
-   *isintegral = SCIPvarIsIntegral(SCIPgetVarExprVar(expr));
+   SCIP_VAR* var = SCIPgetVarExprVar(expr);
+
+   if( !SCIPvarIsIntegral(var) )
+      *integrality = SCIP_IMPLINTTYPE_NONE;
+   else if( SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_WEAK )
+      *integrality = SCIP_IMPLINTTYPE_WEAK;
+   else
+      *integrality = SCIP_IMPLINTTYPE_STRONG;
 
    return SCIP_OKAY;
 }

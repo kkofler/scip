@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -289,6 +289,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -316,7 +317,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copycutselectors, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copyiisfinders, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
 
    return SCIP_OKAY;
 }
@@ -1016,23 +1017,25 @@ SCIP_RETCODE copyVars(
       if( SCIPvarIsRelaxationOnly(sourcevars[i]) )
       {
 #ifndef NDEBUG
-         switch( SCIPvarGetType(sourcevars[i]) )
+         if( SCIPvarIsImpliedIntegral(sourcevars[i]) )
+            ++nrelaxonlyimplvars;
+         else
          {
-         case SCIP_VARTYPE_BINARY:
-            nrelaxonlybinvars++;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            nrelaxonlyintvars++;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-            nrelaxonlyimplvars++;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            nrelaxonlycontvars++;
-            break;
-         default:
-            SCIPerrorMessage("unknown variable type\n");
-            return SCIP_INVALIDDATA;
+            switch( SCIPvarGetType(sourcevars[i]) )
+            {
+               case SCIP_VARTYPE_BINARY:
+                  ++nrelaxonlybinvars;
+                  break;
+               case SCIP_VARTYPE_INTEGER:
+                  ++nrelaxonlyintvars;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+                  ++nrelaxonlycontvars;
+                  break;
+               default:
+                  SCIPerrorMessage("unknown variable type\n");
+                  return SCIP_INVALIDDATA;
+            } /*lint !e788*/
          }
 #endif
          continue;
@@ -1041,7 +1044,7 @@ SCIP_RETCODE copyVars(
       /* copy variable and add this copy to the target SCIP if the copying was valid */
       SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevars[i], &targetvar, localvarmap, localconsmap, global, &success) );
       /* copy exact data, if solving exactly */
-      if( SCIPisExactSolve(targetscip) && SCIPisExactSolve(sourcescip) )
+      if( SCIPisExact(targetscip) && SCIPisExact(sourcescip) )
       {
          SCIP_CALL( SCIPvarCopyExactData(targetscip->mem->probmem, targetvar, sourcevars[i], FALSE) );
       }
@@ -1084,42 +1087,20 @@ SCIP_RETCODE copyVars(
    }
    else
    {
-      SCIP_VAR** sourcefixedvars;
-      int nsourcefixedvars;
+      SCIP_VAR** sourcefixedvars = SCIPgetFixedVars(sourcescip);
+      int nsourcefixedvars = SCIPgetNFixedVars(sourcescip);
       int nfixedbinvars;
       int nfixedintvars;
-      int nfixedimplvars;
+      int nfixedbinimplvars;
+      int nfixedintimplvars;
+      int nfixedcontimplvars;
       int nfixedcontvars;
-
-      sourcefixedvars = SCIPgetFixedVars(sourcescip);
-      nsourcefixedvars = SCIPgetNFixedVars(sourcescip);
-      nfixedbinvars = 0;
-      nfixedintvars = 0;
-      nfixedimplvars = 0;
-      nfixedcontvars = 0;
+      int nfixedimplvars;
 
       /* count number of fixed variables for all variable types */
-      for( i = 0; i < nsourcefixedvars; ++i )
-      {
-         switch( SCIPvarGetType(sourcefixedvars[i]) )
-         {
-         case SCIP_VARTYPE_BINARY:
-            nfixedbinvars++;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            nfixedintvars++;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-            nfixedimplvars++;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            nfixedcontvars++;
-            break;
-         default:
-            SCIPerrorMessage("unknown variable type\n");
-            return SCIP_INVALIDDATA;
-         }
-      }
+      SCIPvarsCountTypes(sourcefixedvars, nsourcefixedvars, &nfixedbinvars, &nfixedintvars,
+         &nfixedbinimplvars, &nfixedintimplvars, &nfixedcontimplvars, &nfixedcontvars);
+      nfixedimplvars = nfixedbinimplvars + nfixedintimplvars + nfixedcontimplvars;
       assert(nsourcefixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
       assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);
       assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) <= SCIPgetNIntVars(targetscip) + nrelaxonlyintvars + SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);
@@ -1668,9 +1649,6 @@ SCIP_RETCODE SCIPgetConsCopy(
       SCIP_CALL( SCIPconsCopy(targetcons, targetscip->set, name, sourcescip, sourceconshdlr, sourcecons, localvarmap, localconsmap,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
 
-      /* it is possible for the constraint handler to declare the copy valid although no target constraint was created */
-      assert(*targetcons == NULL || *valid);
-
       /* if a target constraint was created */
       if( *targetcons != NULL && !uselocalconsmap )
       {
@@ -1848,9 +1826,6 @@ SCIP_RETCODE SCIPcopyConss(
                SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
                SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]),
                SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &singlevalid) );
-
-         /* it is possible for a constraint handler to declare the copy valid, although no target constraint was created */
-         assert(targetcons == NULL || singlevalid);
 
          /* add the copied constraint to target SCIP if the copying process created a constraint */
          if( targetcons != NULL )
@@ -2252,8 +2227,8 @@ SCIP_RETCODE SCIPcopyConflicts(
    assert(targetscip != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( SCIPcheckStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPcheckStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(sourcescip, "SCIPcopyConflicts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(targetscip, "SCIPcopyConflicts", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check if we locally need to create a variable or constraint hash map */
    uselocalvarmap = (varmap == NULL);
@@ -2708,7 +2683,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
@@ -2746,7 +2721,11 @@ SCIP_RETCODE doCopy(
 
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
-   SCIP_CALL( SCIPsetBoolParam(targetscip, "exact/enabled", FALSE) );
+
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPenableExactSolving(targetscip, FALSE) );
 
    /* restore original quiet state */
    SCIPsetMessagehdlrQuiet(targetscip, msghdlrquiet);
@@ -2855,6 +2834,8 @@ SCIP_RETCODE doCopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -2949,6 +2930,8 @@ SCIP_RETCODE SCIPcopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -3033,6 +3016,8 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -3116,6 +3101,8 @@ SCIP_RETCODE SCIPcopyOrig(
  *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
