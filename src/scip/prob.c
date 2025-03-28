@@ -31,7 +31,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/branch.h"
-#include "scip/certificate.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/datatree.h"
@@ -349,7 +348,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->consschecksorted = FALSE;
    (*prob)->conscompression = FALSE;
    (*prob)->objoffsetexact = NULL;
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIP_CALL( SCIPrationalCreateBlock(blkmem, &(*prob)->objoffsetexact) );
    }
@@ -1733,7 +1732,7 @@ SCIP_RETCODE probCheckObjIntegralExact(
 
    assert(transprob != NULL);
    assert(origprob != NULL);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
 
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( transprob->objisintegral )
@@ -1801,7 +1800,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    assert(transprob != NULL);
    assert(origprob != NULL);
 
-   if( set->exact_enabled )
+   if( set->exact_enable )
       return probCheckObjIntegralExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventqueue,
             eventfilter);
 
@@ -1965,7 +1964,7 @@ SCIP_RETCODE probScaleObjExact(
       SCIPrationalDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
 
       /* apply scaling */
-      if( success && !SCIPrationalIsEqualReal(intscalar, 1.0) )
+      if( success && !SCIPrationalIsEQReal(intscalar, 1.0) )
       {
          /* calculate scaled objective values */
          for( v = 0; v < nints; ++v )
@@ -2025,7 +2024,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
       return SCIP_OKAY;
 
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIP_CALL( probScaleObjExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventqueue,
             eventfilter) );
@@ -2243,7 +2242,7 @@ void SCIPprobUpdateBestRootSol(
 
             /* get reduced cost if the variable gets fixed to one */
             ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, prob, lp);
-            assert( set->exact_enabled || !SCIPsetIsDualfeasNegative(set, ubrootredcost)
+            assert( set->exact_enable || !SCIPsetIsDualfeasNegative(set, ubrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             if( -lbrootredcost > ubrootredcost )
@@ -2532,7 +2531,7 @@ void SCIPprobExternObjvalExact(
    assert(transprob != NULL);
    assert(transprob->transformed);
    assert(transprob->objscale > 0.0);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
 
    (void) SCIPrationalCreateBuffer(set->buffer, &tmpval);
 
@@ -2590,7 +2589,7 @@ void SCIPprobInternObjvalExact(
    assert(transprob != NULL);
    assert(transprob->transformed);
    assert(transprob->objscale > 0.0);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
 
    (void) SCIPrationalCreateBuffer(set->buffer, &tmpval);
 

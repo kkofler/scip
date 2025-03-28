@@ -697,8 +697,8 @@ SCIP_RETCODE SCIPsolTransform(
    return SCIP_OKAY;
 }
 
-/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
- *  deteriorated by this method.
+/** adjusts solution values of implied integral variables in handed solution, solution objective value is not
+ *  deteriorated by this method
  */
 SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -710,28 +710,26 @@ SCIP_RETCODE SCIPsolAdjustImplicitSolVals(
    )
 {
    SCIP_VAR** vars;
-   int nimplvars;
-   int nbinvars;
-   int nintvars;
+   int nimplvarsbegin;
+   int nimplvarsend;
    int v;
 
    assert(sol != NULL);
    assert(prob != NULL);
 
-   /* get variable data */
-   vars = SCIPprobGetVars(prob);
-   nbinvars = SCIPprobGetNBinVars(prob);
-   nintvars = SCIPprobGetNIntVars(prob);
-   nimplvars = SCIPprobGetNImplVars(prob);
+   /* get number of implied integral variables */
+   nimplvarsend = SCIPprobGetNImplVars(prob);
 
-   if( nimplvars == 0 )
+   if( nimplvarsend == 0 )
       return SCIP_OKAY;
 
-   /* calculate the last array position of implicit integer variables */
-   nimplvars = nbinvars + nintvars + nimplvars;
+   /* get range of implied integral variables */
+   vars = SCIPprobGetVars(prob);
+   nimplvarsbegin = SCIPprobGetNBinVars(prob) + SCIPprobGetNIntVars(prob);
+   nimplvarsend += nimplvarsbegin;
 
-   /* loop over implicit integer variables and round them up or down */
-   for( v = nbinvars + nintvars; v < nimplvars; ++v )
+   /* loop over implied integral variables and round them up or down */
+   for( v = nimplvarsbegin; v < nimplvarsend; ++v )
    {
       SCIP_VAR* var;
       SCIP_Real solval;
@@ -1732,7 +1730,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 
          solGetArrayValExact(oldval, sol, var);
 
-         if( !SCIPrationalIsEqual(val, oldval) )
+         if( !SCIPrationalIsEQ(val, oldval) )
          {
             SCIP_RATIONAL* obj;
 
@@ -1756,7 +1754,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 
       solGetArrayValExact(oldval, sol, var);
 
-      if( !SCIPrationalIsEqual(val, oldval) )
+      if( !SCIPrationalIsEQ(val, oldval) )
       {
          SCIP_RATIONAL* obj;
          SCIP_CALL( solSetArrayValExact(sol, set, var, val) );
@@ -1770,7 +1768,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 
    case SCIP_VARSTATUS_FIXED:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-      if( !SCIPrationalIsEqual(val, SCIPvarGetLbGlobalExact(var)) )
+      if( !SCIPrationalIsEQ(val, SCIPvarGetLbGlobalExact(var)) )
       {
          SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), SCIPrationalGetReal(SCIPvarGetLbGlobalExact(var)), SCIPrationalGetReal(val));
@@ -1967,9 +1965,9 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var) || (set->exact_enabled && SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)))) ; /*lint !e777*/
-      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var) || (set->exact_enabled && SCIPrationalIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var)))); /*lint !e777*/
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var) || (set->exact_enabled && SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)))); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var) || (set->exact_enable && SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)))) ; /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var) || (set->exact_enable && SCIPrationalIsEQ(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var)))); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var) || (set->exact_enable && SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)))); /*lint !e777*/
       return SCIPvarGetLbGlobal(var);
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -2111,9 +2109,9 @@ void SCIPsolGetValExact(
 
    case SCIP_VARSTATUS_FIXED:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
-      assert(SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
-      assert(SCIPrationalIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
-      assert(SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
+      assert(SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
+      assert(SCIPrationalIsEQ(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
+      assert(SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
       SCIPrationalSetRational(res, SCIPvarGetLbGlobalExact(var));
       break;
 
@@ -2684,7 +2682,7 @@ SCIP_RETCODE SCIPsolCheck(
    *feasible = TRUE;
 
    /* have to check bounds without tolerances in exact solving mode */
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIP_CALL( solCheckExact(sol, set, messagehdlr, blkmem, stat, prob, printreason,
             completely, checklprows, feasible) );
@@ -2800,8 +2798,9 @@ SCIP_RETCODE SCIPsolRound(
    assert(prob->transformed);
    assert(success != NULL);
 
-   /* round all roundable fractional variables in the corresponding direction as long as no unroundable var was found */
-   nvars = prob->nbinvars + prob->nintvars;
+   /* round all roundable fractional enforced integral variables as long as no unroundable var was found */
+   nvars = prob->nvars - prob->ncontvars - prob->ncontimplvars;
+   assert(nvars >= 0);
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -3287,7 +3286,7 @@ SCIP_Bool solsAreEqualExact(
    }
 
    /* solutions with different objective values cannot be the same */
-   if( !SCIPrationalIsEqual(tmp1, tmp2) )
+   if( !SCIPrationalIsEQ(tmp1, tmp2) )
       result = FALSE;
 
    /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
@@ -3310,7 +3309,7 @@ SCIP_Bool solsAreEqualExact(
       else
          SCIPrationalSetReal(tmp2, SCIPsolGetVal(sol2, set, stat, prob->vars[v]));
 
-      if( !SCIPrationalIsEqual(tmp1, tmp2) )
+      if( !SCIPrationalIsEQ(tmp1, tmp2) )
          result = FALSE;
    }
 
@@ -3342,7 +3341,7 @@ SCIP_Bool SCIPsolsAreEqual(
    assert((SCIPsolIsOriginal(sol1) && SCIPsolIsOriginal(sol2)) || transprob != NULL);
 
    /* exact solutions should be checked exactly */
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       return solsAreEqualExact(sol1, sol2, set, stat, origprob, transprob);
    }

@@ -756,6 +756,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \
+			scip/heur_dks.o \
 			scip/heur_dps.o \
 			scip/heur_dualval.o \
 			scip/heur_farkasdiving.o \
@@ -1003,6 +1004,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/retcode.o \
 			scip/scip_benders.o \
 			scip/scip_branch.o \
+			scip/scip_certificate.o \
 			scip/scip_compr.o \
 			scip/scip_concurrent.o \
 			scip/scip_conflict.o \
@@ -1923,16 +1925,13 @@ endif
 .PHONY: successwarnings
 successwarnings:
 ifeq ($(READLINE),false)
-		@echo "WARNING: built with READLINE=false: interactive shell misses tab completion, history capability, and in-line editing"
+		@echo "Note: built with READLINE=false: interactive shell misses tab completion, history capability, and in-line editing"
 endif
 ifeq ($(GMP),false)
-		@echo "WARNING: built with GMP=false: ZIMPL support and solution counting feature are not available"
+		@echo "Note: built with GMP=false: ZIMPL support and solution counting feature are not available"
 endif
 ifeq ($(ZLIB),false)
-		@echo "WARNING: built with ZLIB=false: support for reading gzipped files is not available"
-endif
-ifeq ($(EXACTSOLVE),false)
-		@echo "WARNING: exact solving mode not available (build with GMP=true BOOST=true MPFR=true LPSEXACT=spx to enable it)"
+		@echo "Note: built with ZLIB=false: support for reading gzipped files is not available"
 endif
 
 .PHONY: help

@@ -85,6 +85,7 @@
 #include "scip/reopt.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_datatree.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -109,8 +110,6 @@
 #include "scip/table.h"
 #include "scip/tree.h"
 #include "scip/var.h"
-#include "scip/cons_exactlinear.h"
-#include "scip/scip_exact.h"
 #include <string.h>
 
 /** gets number of branch and bound runs performed, including the current run
@@ -4445,7 +4444,7 @@ void SCIPprintLPStatistics(
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
 
-   if( scip->set->exact_enabled )
+   if( scip->set->exact_enable )
    {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Safe Bounding      :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",

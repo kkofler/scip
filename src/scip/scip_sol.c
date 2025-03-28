@@ -2207,8 +2207,8 @@ SCIP_Bool SCIPareSolsEqual(
    return SCIPsolsAreEqual(sol1, sol2, scip->set, scip->stat, scip->origprob, scip->transprob);
 }
 
-/** adjusts solution values of implicit integer variables in handed solution. Solution objective value is not
- *  deteriorated by this method.
+/** adjusts solution values of implied integral variables in handed solution, solution objective value is not
+ *  deteriorated by this method
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -4065,7 +4065,7 @@ SCIP_RETCODE SCIPcheckSol(
    }
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || scip->set->exact_enabled;
+   checklprows = checklprows || scip->set->exact_enable;
 
    if( !printreason )
       completely = FALSE;

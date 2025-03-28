@@ -62,6 +62,7 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
@@ -712,12 +713,11 @@ SCIP_RETCODE boundchgApplyExact(
                SCIPerrorMessage("invalid bound change type %d\n", boundchg->boundchgtype);
                return SCIP_INVALIDDATA;
             }
-            if( SCIPcertificateShouldTrackBounds(set->scip) )
+            if( SCIPshouldCertificateTrackBounds(set->scip) )
             {
                assert( var->exactdata->locdom.lbcertificateidx != -1 || SCIPsetIsInfinity(set, -var->locdom.lb) );
-               var->lbchginfos[var->nlbchginfos - 1].oldcertindex = var->exactdata->locdom.lbcertificateidx;
-               SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-                  boundchg->certificateindex) );
+               var->lbchginfos[var->nlbchginfos - 1].oldcertificateindex = var->exactdata->locdom.lbcertificateidx;
+               SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip), boundchg->certificateindex) );
             }
             /* change local bound of variable */
             SCIP_CALL( SCIPvarChgLbLocalExact(var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, boundchg->newboundexact) );
@@ -786,12 +786,11 @@ SCIP_RETCODE boundchgApplyExact(
                return SCIP_INVALIDDATA;
             }
 
-            if( SCIPcertificateShouldTrackBounds(set->scip) )
+            if( SCIPshouldCertificateTrackBounds(set->scip) )
             {
                assert( var->exactdata->locdom.ubcertificateidx != -1 || SCIPsetIsInfinity(set, var->locdom.ub) );
-               var->ubchginfos[var->nubchginfos - 1].oldcertindex = var->exactdata->locdom.ubcertificateidx;
-               SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-                     boundchg->certificateindex) );
+               var->ubchginfos[var->nubchginfos - 1].oldcertificateindex = var->exactdata->locdom.ubcertificateidx;
+               SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip), boundchg->certificateindex) );
             }
             /* change local bound of variable */
             SCIP_CALL( SCIPvarChgUbLocalExact(var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, boundchg->newboundexact) );
@@ -927,12 +926,11 @@ SCIP_RETCODE SCIPboundchgApply(
                return SCIP_INVALIDDATA;
             }
 
-            if( SCIPcertificateShouldTrackBounds(set->scip) )
+            if( SCIPshouldCertificateTrackBounds(set->scip) )
             {
                assert( var->exactdata->locdom.lbcertificateidx != -1 || SCIPsetIsInfinity(set, -var->locdom.lb) );
-               var->lbchginfos[var->nlbchginfos - 1].oldcertindex = var->exactdata->locdom.lbcertificateidx;
-               SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-                     boundchg->certificateindex) );
+               var->lbchginfos[var->nlbchginfos - 1].oldcertificateindex = var->exactdata->locdom.lbcertificateidx;
+               SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip), boundchg->certificateindex) );
             }
 
             /* change local bound of variable */
@@ -1002,12 +1000,11 @@ SCIP_RETCODE SCIPboundchgApply(
                return SCIP_INVALIDDATA;
             }
 
-            if( SCIPcertificateShouldTrackBounds(set->scip) )
+            if( SCIPshouldCertificateTrackBounds(set->scip) )
             {
                assert( var->exactdata->locdom.ubcertificateidx != -1 || SCIPsetIsInfinity(set, var->locdom.ub) );
-               var->ubchginfos[var->nubchginfos - 1].oldcertindex = var->exactdata->locdom.ubcertificateidx;
-               SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-                     boundchg->certificateindex) );
+               var->ubchginfos[var->nubchginfos - 1].oldcertificateindex = var->exactdata->locdom.ubcertificateidx;
+               SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip), boundchg->certificateindex) );
             }
 
             /* change local bound of variable */
@@ -1098,14 +1095,14 @@ SCIP_RETCODE SCIPboundchgUndo(
          var->lbchginfos[var->nlbchginfos].oldbound, var->lbchginfos[var->nlbchginfos].newbound);
 
       /* in case certificate is used, set back the certificate line index */
-      if ( SCIPcertificateShouldTrackBounds(set->scip) )
+      if( SCIPshouldCertificateTrackBounds(set->scip)
+         && !SCIPsetIsInfinity(set, -var->lbchginfos[var->nlbchginfos].oldbound) )
       {
-         if (!SCIPsetIsInfinity(set, -var->lbchginfos[var->nlbchginfos].oldbound))
-            SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
-               var->lbchginfos[var->nlbchginfos].oldcertindex) );
+         SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip),
+               var->lbchginfos[var->nlbchginfos].oldcertificateindex) );
       }
 
-      if( set->exact_enabled && !SCIPrationalIsFpRepresentable(SCIPvarGetLbGlobalExact(boundchg->var))
+      if( set->exact_enable && !SCIPrationalIsFpRepresentable(SCIPvarGetLbGlobalExact(boundchg->var))
             && SCIPsetIsEQ(set, var->lbchginfos[var->nlbchginfos].oldbound, SCIPvarGetLbGlobal(boundchg->var) ) )
       {
          /* reinstall the exact global bound, if necessary */
@@ -1118,10 +1115,6 @@ SCIP_RETCODE SCIPboundchgUndo(
          SCIP_CALL( SCIPvarChgLbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
                var->lbchginfos[var->nlbchginfos].oldbound) );
       }
-
-      /* reinstall the previous local bound */
-      SCIP_CALL( SCIPvarChgLbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
-            var->lbchginfos[var->nlbchginfos].oldbound) );
 
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nlbchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.lb, var->glbdom.lb));
@@ -1140,14 +1133,14 @@ SCIP_RETCODE SCIPboundchgUndo(
          var->ubchginfos[var->nubchginfos].bdchgidx.depth, var->ubchginfos[var->nubchginfos].bdchgidx.pos,
          var->ubchginfos[var->nubchginfos].oldbound, var->ubchginfos[var->nubchginfos].newbound);
 
-      if( SCIPcertificateShouldTrackBounds(set->scip) )
+      if( SCIPshouldCertificateTrackBounds(set->scip)
+         && !SCIPsetIsInfinity(set, var->ubchginfos[var->nubchginfos].oldbound) )
       {
-         if (!SCIPsetIsInfinity(set, var->ubchginfos[var->nubchginfos].oldbound))
-            SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip,
-               SCIPgetCertificate(set->scip), var->ubchginfos[var->nubchginfos].oldcertindex) );
+         SCIP_CALL( SCIPcertificateSetLastBoundIndex(SCIPgetCertificate(set->scip),
+               var->ubchginfos[var->nubchginfos].oldcertificateindex) );
       }
 
-      if( set->exact_enabled && !SCIPrationalIsFpRepresentable(SCIPvarGetUbGlobalExact(boundchg->var))
+      if( set->exact_enable && !SCIPrationalIsFpRepresentable(SCIPvarGetUbGlobalExact(boundchg->var))
             && SCIPsetIsEQ(set, var->ubchginfos[var->nubchginfos].oldbound, SCIPvarGetUbGlobal(boundchg->var) ) )
       {
          /* reinstall the exact global bound, if necessary */
@@ -1237,7 +1230,7 @@ SCIP_RETCODE boundchgApplyGlobal(
       return SCIP_OKAY;
    }
 
-   if( SCIPcertificateIsEnabled(stat->certificate) )
+   if( SCIPisCertified(set->scip) )
    {
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
@@ -1997,7 +1990,7 @@ void overwriteMultAggrWithExactData(
 {
    int i;
 
-   if( !set->exact_enabled || SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+   if( !set->exact_enable || SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
       return;
 
    var->data.multaggr.constant = SCIPrationalGetReal(var->exactdata->multaggr.constant);
@@ -3365,7 +3358,7 @@ SCIP_RETCODE varFreeExactData(
    assert(blkmem != NULL);
    assert(var != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
    {
       assert( var->exactdata == NULL );
       return SCIP_OKAY;
@@ -4317,7 +4310,7 @@ SCIP_RETCODE SCIPvarColumnExact(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(var != NULL);
@@ -4674,16 +4667,16 @@ SCIP_RETCODE SCIPvarFixExact(
 
    assert(var != NULL);
    assert(var->scip == set->scip);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
 
    *infeasible = FALSE;
    *fixed = FALSE;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
-   assert(SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb));
-   assert(SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub));
+   assert(SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb));
+   assert(SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub));
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
@@ -4697,7 +4690,7 @@ SCIP_RETCODE SCIPvarFixExact(
 
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_FIXED )
    {
-      *infeasible = !SCIPrationalIsEqual(fixedval, var->exactdata->locdom.lb);
+      *infeasible = !SCIPrationalIsEQ(fixedval, var->exactdata->locdom.lb);
       SCIPrationalDebugMessage(" -> variable already fixed to %q (fixedval=%q): infeasible=%u\n", var->exactdata->locdom.lb, fixedval, *infeasible);
       goto terminate;
    }
@@ -5572,7 +5565,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
             if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
             {
                SCIPrationalNegate(scalar, activescalars[v]);
-               if( !SCIPrationalIsEqual(activescalars[v - 1], scalar) )
+               if( !SCIPrationalIsEQ(activescalars[v - 1], scalar) )
                {
                   SCIPrationalAdd(activescalars[v - 1], activescalars[v - 1], activescalars[v]);
                   --nactivevars;
@@ -5701,7 +5694,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    nmultvars = var->data.multaggr.nvars;
    multvarssize = var->data.multaggr.varssize;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
    {
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
 
@@ -6099,7 +6092,7 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
          *infeasible = TRUE;
          break;
       }
-      else if( SCIPrationalIsEqual(varlb, varub) )
+      else if( SCIPrationalIsEQ(varlb, varub) )
       {
          /* the aggregated variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFixExact(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
@@ -6180,7 +6173,7 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
          *infeasible = TRUE;
          break;
       }
-      else if( SCIPrationalIsEqual(aggvarlb, aggvarub) )
+      else if( SCIPrationalIsEQ(aggvarlb, aggvarub) )
       {
          /* the aggregation variable is fixed -> fix both variables */
          SCIP_CALL( SCIPvarFixExact(aggvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
@@ -6205,14 +6198,14 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
          {
             SCIPrationalSetRational(varlb, aggvar->exactdata->glbdom.lb);
             SCIP_CALL( SCIPvarChgLbGlobalExact(aggvar, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, cliquetable, aggvarlb) );
-            aggvarbdschanged = !SCIPrationalIsEqual(varlb, aggvar->exactdata->glbdom.lb);
+            aggvarbdschanged = !SCIPrationalIsEQ(varlb, aggvar->exactdata->glbdom.lb);
          }
 
          if( SCIPrationalIsLT(aggvarub, aggvar->exactdata->glbdom.ub) )
          {
             SCIPrationalSetRational(varub, aggvar->exactdata->glbdom.ub);
             SCIP_CALL( SCIPvarChgUbGlobalExact(aggvar, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, cliquetable, aggvarub) );
-            aggvarbdschanged = aggvarbdschanged || !SCIPrationalIsEqual(varub, aggvar->exactdata->glbdom.ub);
+            aggvarbdschanged = aggvarbdschanged || !SCIPrationalIsEQ(varub, aggvar->exactdata->glbdom.ub);
          }
 
          /* update the hole list of the aggregation variable */
@@ -6622,7 +6615,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
    /* if variable and aggregation variable are equal, the variable can be fixed: x == a*x + c  =>  x == c/(1-a) */
    if( var == aggvar )
    {
-      if( SCIPrationalIsEqualReal(scalar, 1.0) )
+      if( SCIPrationalIsEQReal(scalar, 1.0) )
          *infeasible = !SCIPrationalIsZero(constant);
       else
       {
@@ -6677,7 +6670,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
    /* check, if variable should be used as NEGATED variable of the aggregation variable */
    if( SCIPvarIsBinary(var) && SCIPvarIsBinary(aggvar)
       && var->negatedvar == NULL && aggvar->negatedvar == NULL
-      && SCIPrationalIsEqualReal(scalar, -1.0) && SCIPrationalIsEqualReal(constant, 1.0) )
+      && SCIPrationalIsEQReal(scalar, -1.0) && SCIPrationalIsEQReal(constant, 1.0) )
    {
       /* link both variables as negation pair */
       var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
@@ -6933,7 +6926,7 @@ SCIP_RETCODE tryAggregateIntVars(
    }
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
-   if( (a == 1 || a == -1) && !SCIPvarIsImpliedIntegral(vary) )
+   if( ( a == 1 || a == -1 ) && !SCIPvarIsImpliedIntegral(vary) )
    {
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
@@ -6942,7 +6935,7 @@ SCIP_RETCODE tryAggregateIntVars(
       assert(*aggregated);
       return SCIP_OKAY;
    }
-   if( (b == 1 || b == -1) && !SCIPvarIsImpliedIntegral(vary) )
+   if( ( b == 1 || b == -1 ) && !SCIPvarIsImpliedIntegral(varx) )
    {
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
@@ -7173,7 +7166,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    }
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
-   if( (a == 1 || a == -1) && !SCIPvarIsImpliedIntegral(vary) )
+   if( ( a == 1 || a == -1 ) && !SCIPvarIsImpliedIntegral(vary) )
    {
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
@@ -7184,8 +7177,7 @@ SCIP_RETCODE tryAggregateIntVarsExact(
       assert(*aggregated);
       goto FREE;
    }
-
-   if( (b == 1 || b == -1) && !SCIPvarIsImpliedIntegral(varx) )
+   if( ( b == 1 || b == -1 ) && !SCIPvarIsImpliedIntegral(varx) )
    {
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
@@ -8080,9 +8072,9 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
 
    assert(var != NULL);
    assert(var->scip == set->scip);
-   assert(set->exact_enabled);
-   assert(SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb)); /*lint !e777*/
-   assert(SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub)); /*lint !e777*/
+   assert(set->exact_enable);
+   assert(SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb)); /*lint !e777*/
+   assert(SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub)); /*lint !e777*/
    assert(naggvars == 0 || aggvars != NULL);
    assert(naggvars == 0 || scalars != NULL);
    assert(infeasible != NULL);
@@ -8151,7 +8143,7 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       }
 
       /* this means that x = x + a_1*y_1 + ... + a_n*y_n + c */
-      if( SCIPrationalIsEqualReal(tmpscalar, 1.0) )
+      if( SCIPrationalIsEQReal(tmpscalar, 1.0) )
       {
          if( ntmpvars == 0 )
          {
@@ -8567,10 +8559,10 @@ SCIP_RETCODE varNegateExactData(
 
    negvar->exactdata->varstatusexact = SCIP_VARSTATUS_NEGATED;
 
-   assert(SCIPrationalIsEqualReal(negvar->exactdata->glbdom.ub, negvar->glbdom.ub));
-   assert(SCIPrationalIsEqualReal(negvar->exactdata->locdom.ub, negvar->locdom.ub));
-   assert(SCIPrationalIsEqualReal(negvar->exactdata->glbdom.lb, negvar->glbdom.lb));
-   assert(SCIPrationalIsEqualReal(negvar->exactdata->locdom.lb, negvar->locdom.lb));
+   assert(SCIPrationalIsEQReal(negvar->exactdata->glbdom.ub, negvar->glbdom.ub));
+   assert(SCIPrationalIsEQReal(negvar->exactdata->locdom.ub, negvar->locdom.ub));
+   assert(SCIPrationalIsEQReal(negvar->exactdata->glbdom.lb, negvar->glbdom.lb));
+   assert(SCIPrationalIsEQReal(negvar->exactdata->locdom.lb, negvar->locdom.lb));
 
    return SCIP_OKAY;
 }
@@ -8975,7 +8967,7 @@ SCIP_RETCODE varEventObjChanged(
    */
    assert(!SCIPsetIsEQ(set, oldobj, newobj) ||
           (SCIPsetIsEQ(set, oldobj, newobj) && REALABS(newobj) > 1e+15 * SCIPsetEpsilon(set)) ||
-          (set->exact_enabled && oldobj != newobj)); /*lint !e777*/
+          (set->exact_enable && oldobj != newobj)); /*lint !e777*/
 
    SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
@@ -9009,7 +9001,7 @@ SCIP_RETCODE varEventObjChangedExact(
    * Hence, we relax it by letting it pass if the variables are percieved the same and we use very large values
    * that make comparison with values close to epsilon inaccurate.
    */
-   assert(!SCIPrationalIsEqual(oldobj, newobj));
+   assert(!SCIPrationalIsEQ(oldobj, newobj));
 
    SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, SCIPrationalGetReal(oldobj), SCIPrationalGetReal(newobj)) );
    SCIP_CALL( SCIPeventAddExactObjChg(event, blkmem, oldobj, newobj) );
@@ -9112,7 +9104,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
    assert(var != NULL);
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(var->exactdata != NULL);
@@ -9124,7 +9116,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
 
    SCIPrationalDebugMessage("changing exact objective value of <%s> from %q to %q\n", var->name, var->exactdata->obj, newobj);
 
-   if( !SCIPrationalIsEqual(var->exactdata->obj, newobj) )
+   if( !SCIPrationalIsEQ(var->exactdata->obj, newobj) )
    {
       switch( SCIPvarGetStatusExact(var) )
       {
@@ -9724,7 +9716,7 @@ SCIP_RETCODE SCIPvarChgLbOriginalExact(
       SCIPrationalDebugMessage("changing original lower bound of <%s> from %q to %q\n",
          var->name, var->exactdata->origdom.lb, newbound);
 
-      if( SCIPrationalIsEqual(var->exactdata->origdom.lb, newbound) )
+      if( SCIPrationalIsEQ(var->exactdata->origdom.lb, newbound) )
       {
          SCIPrationalFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
@@ -9856,7 +9848,7 @@ SCIP_RETCODE SCIPvarChgUbOriginalExact(
       SCIPrationalDebugMessage("changing original upper bound of <%s> from %q to %q\n",
          var->name, var->exactdata->origdom.ub, newbound);
 
-      if( SCIPrationalIsEqual(var->exactdata->origdom.ub, newbound) )
+      if( SCIPrationalIsEQ(var->exactdata->origdom.ub, newbound) )
       {
          SCIPrationalFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
@@ -9952,7 +9944,7 @@ SCIP_RETCODE varEventGlbChangedExact(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPrationalIsEqual(oldbound, newbound));
+   assert(!SCIPrationalIsEQ(oldbound, newbound));
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -10029,7 +10021,7 @@ SCIP_RETCODE varEventGubChangedExact(
    assert(var != NULL);
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
-   assert(!SCIPrationalIsEqual(oldbound, newbound));
+   assert(!SCIPrationalIsEQ(oldbound, newbound));
    assert(set != NULL);
    assert(var->scip == set->scip);
 
@@ -10178,7 +10170,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
    oldbound = var->glbdom.lb;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
    var->glbdom.lb = newbound;
-   if( set->exact_enabled && SCIPrationalIsLTReal(SCIPvarGetLbGlobalExact(var), newbound) )
+   if( set->exact_enable && SCIPrationalIsLTReal(SCIPvarGetLbGlobalExact(var), newbound) )
       SCIPrationalSetReal(var->exactdata->glbdom.lb, newbound);
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
@@ -10357,7 +10349,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    oldbound = var->glbdom.ub;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
    var->glbdom.ub = newbound;
-   if( set->exact_enabled && SCIPrationalIsGTReal(SCIPvarGetUbGlobalExact(var), newbound) )
+   if( set->exact_enable && SCIPrationalIsGTReal(SCIPvarGetUbGlobalExact(var), newbound) )
       SCIPrationalSetReal(var->exactdata->glbdom.ub, newbound);
 
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
@@ -10538,11 +10530,11 @@ SCIP_RETCODE varProcessChgLbGlobalExact(
    }
    assert(!SCIPvarIsIntegral(var) || SCIPrationalIsIntegral(newbound));
 
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPrationalIsEqualReal(newbound, 0.0) || SCIPrationalIsEqualReal(newbound, 1.0)); /*lint !e641*/
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPrationalIsEQReal(newbound, 0.0) || SCIPrationalIsEQReal(newbound, 1.0)); /*lint !e641*/
 
    SCIPrationalDebugMessage("process changing exact global lower bound of <%s> from %q to %q\n", var->name, var->exactdata->glbdom.lb, newbound);
 
-   if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.lb) )
+   if( SCIPrationalIsEQ(newbound, var->exactdata->glbdom.lb) )
    {
       SCIPrationalFreeBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
@@ -10680,11 +10672,11 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
    }
    assert(!SCIPvarIsIntegral(var) || SCIPrationalIsIntegral(newbound));
 
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPrationalIsEqualReal(newbound, 0.0) || SCIPrationalIsEqualReal(newbound, 1.0)); /*lint !e641*/
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPrationalIsEQReal(newbound, 0.0) || SCIPrationalIsEQReal(newbound, 1.0)); /*lint !e641*/
 
    SCIPrationalDebugMessage("process changing exact global upper bound of <%s> from %q to %q\n", var->name, var->exactdata->glbdom.lb, newbound);
 
-   if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.ub) )
+   if( SCIPrationalIsEQ(newbound, var->exactdata->glbdom.ub) )
    {
       SCIPrationalFreeBuffer(set->buffer, &oldbound);
       return SCIP_OKAY;
@@ -11700,7 +11692,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIPrationalSetReal(var->exactdata->locdom.lb, var->locdom.lb);
       SCIPrationalMax(var->exactdata->locdom.lb, var->exactdata->locdom.lb, var->exactdata->glbdom.lb);
@@ -11718,8 +11710,8 @@ SCIP_RETCODE varProcessChgLbLocal(
       domMerge(&var->locdom, blkmem, set, &newbound, NULL);
    }
 
-   if( set->exact_enabled && SCIPisCertificateActive(set->scip) && !SCIPinProbing(set->scip) )
-      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+   if( SCIPisCertified(set->scip) && SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && !SCIPinProbing(set->scip) )
+      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -11753,7 +11745,7 @@ SCIP_RETCODE varProcessChgLbLocal(
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);
 
-            if (!set->exact_enabled)
+            if (!set->exact_enable)
             {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
             }
@@ -11887,7 +11879,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled )
+   if( set->exact_enable )
    {
       SCIPrationalSetReal(var->exactdata->locdom.ub, var->locdom.ub);
       SCIPrationalMin(var->exactdata->locdom.ub, var->exactdata->locdom.ub, var->exactdata->glbdom.ub);
@@ -11905,8 +11897,8 @@ SCIP_RETCODE varProcessChgUbLocal(
       domMerge(&var->locdom, blkmem, set, NULL, &newbound);
    }
 
-   if( set->exact_enabled && SCIPisCertificateActive(set->scip) && !SCIPinProbing(set->scip) )
-      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+   if( SCIPisCertified(set->scip) && SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && !SCIPinProbing(set->scip) )
+      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
@@ -11940,7 +11932,7 @@ SCIP_RETCODE varProcessChgUbLocal(
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);
 
-            if( !set->exact_enabled )
+            if( !set->exact_enable )
             {
                parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
             }
@@ -12055,10 +12047,10 @@ SCIP_RETCODE varProcessChgLbLocalExact(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPrationalIsZero(newbound) || SCIPrationalIsEqualReal(newbound, 1.0)
-            || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPrationalIsZero(newbound) || SCIPrationalIsEQReal(newbound, 1.0)
+            || SCIPrationalIsEQ(newbound, var->exactdata->locdom.ub)))
       || (SCIPvarIsIntegral(var) && (SCIPrationalIsIntegral(newbound)
-            || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
+            || SCIPrationalIsEQ(newbound, var->exactdata->locdom.ub)))
       || !SCIPvarIsIntegral(var));
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
@@ -12080,7 +12072,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
 
    SCIPrationalDebugMessage("process changing lower bound of <%s> from %q to %q\n", var->name, var->exactdata->locdom.lb, newbound);
 
-   if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.lb) && !SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) ) /*lint !e777*/
+   if( SCIPrationalIsEQ(newbound, var->exactdata->glbdom.lb) && !SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) ) /*lint !e777*/
       SCIPrationalSetRational(newbound, var->exactdata->glbdom.lb);
 
    /* change the bound */
@@ -12197,10 +12189,10 @@ SCIP_RETCODE varProcessChgUbLocalExact(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPrationalIsZero(newbound) || SCIPrationalIsEqualReal(newbound, 1.0)
-            || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
+   assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPrationalIsZero(newbound) || SCIPrationalIsEQReal(newbound, 1.0)
+            || SCIPrationalIsEQ(newbound, var->exactdata->locdom.ub)))
       || (SCIPvarIsIntegral(var) && (SCIPrationalIsIntegral(newbound)
-            || SCIPrationalIsEqual(newbound, var->exactdata->locdom.ub)))
+            || SCIPrationalIsEQ(newbound, var->exactdata->locdom.ub)))
       || !SCIPvarIsIntegral(var));
 
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &oldbound) );
@@ -12222,7 +12214,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
 
    SCIPrationalDebugMessage("process changing exact upper bound of <%s> from %q to %q\n", var->name, var->exactdata->locdom.ub, newbound);
 
-   if( SCIPrationalIsEqual(newbound, var->exactdata->glbdom.ub) && !SCIPrationalIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) ) /*lint !e777*/
+   if( SCIPrationalIsEQ(newbound, var->exactdata->glbdom.ub) && !SCIPrationalIsEQ(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) ) /*lint !e777*/
       SCIPrationalSetRational(newbound, var->exactdata->glbdom.ub);
 
    /* change the bound */
@@ -12361,8 +12353,8 @@ SCIP_RETCODE SCIPvarChgLbLocal(
          && !(newbound != var->locdom.lb && newbound * var->locdom.lb <= 0.0) ) /*lint !e777*/
       return SCIP_OKAY;
 
-   if( SCIPcertificateShouldTrackBounds(set->scip) )
-      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+   if( SCIPshouldCertificateTrackBounds(set->scip) )
+      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -12487,8 +12479,8 @@ SCIP_RETCODE SCIPvarChgLbLocalExact(
 
    SCIPrationalDebugMessage("changing lower bound of <%s>[%q,%q] to %q\n", var->name, var->exactdata->locdom.lb, var->exactdata->locdom.ub, newbound);
 
-   if( SCIPcertificateShouldTrackBounds(set->scip) )
-      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+   if( SCIPshouldCertificateTrackBounds(set->scip) )
+      SCIPvarSetLbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatusExact(var) )
@@ -12629,8 +12621,8 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       && !(newbound != var->locdom.ub && newbound * var->locdom.ub <= 0.0) ) /*lint !e777*/
       return SCIP_OKAY;
 
-   if( SCIPcertificateShouldTrackBounds(set->scip) )
-      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+   if( SCIPshouldCertificateTrackBounds(set->scip) )
+      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatus(var) )
@@ -12754,8 +12746,8 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
 
    SCIPrationalDebugMessage("changing upper bound of <%s>[%q,%q] to %q\n", var->name, var->exactdata->locdom.lb, var->exactdata->locdom.ub, newbound);
 
-   if( SCIPcertificateShouldTrackBounds(set->scip) )
-      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
+   if( SCIPshouldCertificateTrackBounds(set->scip) )
+      SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(SCIPgetCertificate(set->scip)));
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatusExact(var) )
@@ -18341,7 +18333,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
       return SCIPcolGetPrimsol(var->data.col);
 
    case SCIP_VARSTATUS_FIXED:
-      assert(var->locdom.lb == var->locdom.ub || (var->exactdata != NULL && SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->locdom.ub || (var->exactdata != NULL && SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
       return var->locdom.lb;
 
    case SCIP_VARSTATUS_AGGREGATED:
@@ -18418,7 +18410,7 @@ void SCIPvarGetLPSolExact_rec(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub)); /*lint !e777*/
+      assert(SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub)); /*lint !e777*/
       SCIPrationalSetRational(res, var->exactdata->locdom.lb);
       break;
 
@@ -18816,10 +18808,10 @@ SCIP_Real getImplVarRedcost(
       {
          SCIP_Real redcost = SCIPcolGetRedcost(col, stat, lp);
 
-         assert(set->exact_enabled || (((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)) ||
+         assert(set->exact_enable || (((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), primsol)) ||
                (lpissolbasic && basestat == SCIP_BASESTAT_LOWER)) ? (!SCIPsetIsDualfeasNegative(set, redcost) ||
                SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE));
-         assert(set->exact_enabled || (((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)) ||
+         assert(set->exact_enable || (((!lpissolbasic && SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), primsol)) ||
                (lpissolbasic && basestat == SCIP_BASESTAT_UPPER)) ? (!SCIPsetIsDualfeasPositive(set, redcost) ||
                SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))) : TRUE));
 
@@ -19699,9 +19691,9 @@ SCIP_RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(var->glbdom.lb == var->glbdom.ub || (set->exact_enabled && SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub))); /*lint !e777*/
-      assert(var->locdom.lb == var->locdom.ub || (set->exact_enabled && SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
-      assert(var->locdom.lb == var->glbdom.lb || (set->exact_enabled && SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb))); /*lint !e777*/
+      assert(var->glbdom.lb == var->glbdom.ub || (set->exact_enable && SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->locdom.ub || (set->exact_enable && SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->glbdom.lb || (set->exact_enable && SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->locdom.lb))); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(var->locdom.lb)));
       SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, val * var->locdom.lb) );
       return SCIP_OKAY;
@@ -19783,7 +19775,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
 
    case SCIP_VARSTATUS_LOOSE:
       /* add globally fixed variables as constant */
-      if( SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub) )
+      if( SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub) )
       {
          SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
          SCIPrationalMult(tmp, val, var->exactdata->glbdom.lb);
@@ -19803,9 +19795,9 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       break;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(SCIPrationalIsEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub)); /*lint !e777*/
-      assert(SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub)); /*lint !e777*/
-      assert(SCIPrationalIsEqual(var->exactdata->locdom.lb, var->exactdata->glbdom.lb)); /*lint !e777*/
+      assert(SCIPrationalIsEQ(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub)); /*lint !e777*/
+      assert(SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->locdom.ub)); /*lint !e777*/
+      assert(SCIPrationalIsEQ(var->exactdata->locdom.lb, var->exactdata->glbdom.lb)); /*lint !e777*/
       assert(!SCIPrationalIsAbsInfinity(var->exactdata->locdom.lb));
 
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
@@ -24954,7 +24946,7 @@ SCIP_Bool SCIPbdchginfoIsTighter(
       : bdchginfo1->newbound < bdchginfo2->newbound);
 }
 
-/** returns position of variable in vipr-certificate */
+/** returns position of variable in certificate */
 int SCIPvarGetCertificateIndex(
    SCIP_VAR*             var                 /**< variable to get index for */
    )
@@ -24965,7 +24957,7 @@ int SCIPvarGetCertificateIndex(
    return var->exactdata->certificateindex;
 }
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 void SCIPvarSetCertificateIndex(
    SCIP_VAR*             var,                /**< variable to set index for */
    int                   certidx             /**< the index */
@@ -24978,10 +24970,10 @@ void SCIPvarSetCertificateIndex(
    var->exactdata->certificateindex = certidx;
 }
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 void SCIPvarSetUbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   certidx             /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24992,7 +24984,7 @@ void SCIPvarSetUbCertificateIndexGlobal(
    var->exactdata->locdom.ubcertificateidx = certidx;
 }
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 void SCIPvarSetUbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
    SCIP_Longint          certidx             /**< the index */
@@ -25005,7 +24997,7 @@ void SCIPvarSetUbCertificateIndexLocal(
    var->exactdata->locdom.ubcertificateidx = certidx;
 }
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 void SCIPvarSetLbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
    SCIP_Longint          certidx             /**< the index */
@@ -25018,10 +25010,10 @@ void SCIPvarSetLbCertificateIndexLocal(
    var->exactdata->locdom.lbcertificateidx = certidx;
 }
 
-/** sets index of variable in vipr-certificate */
+/** sets index of variable in certificate */
 void SCIPvarSetLbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   certidx             /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    )
 {
    assert(var != NULL);

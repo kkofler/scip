@@ -136,7 +136,7 @@ void checkLinks(
          ASSERT(row != NULL);
          ASSERT(!lp->flushed || col->lppos == -1 || col->linkpos[j] >= 0);
          ASSERT(col->linkpos[j] == -1 || row->cols[col->linkpos[j]] == col);
-         ASSERT(col->linkpos[j] == -1 || SCIPrationalIsEqual(row->vals[col->linkpos[j]], col->vals[j]));
+         ASSERT(col->linkpos[j] == -1 || SCIPrationalIsEQ(row->vals[col->linkpos[j]], col->vals[j]));
          ASSERT((j < col->nlprows) == (col->linkpos[j] >= 0 && row->lppos >= 0));
       }
    }
@@ -156,7 +156,7 @@ void checkLinks(
          ASSERT(col != NULL);
          ASSERT(!lp->flushed || row->lppos == -1 || row->linkpos[j] >= 0);
          ASSERT(row->linkpos[j] == -1 || col->rows[row->linkpos[j]] == row);
-         ASSERT(row->linkpos[j] == -1 || SCIPrationalIsEqual(col->vals[row->linkpos[j]], row->vals[j]));
+         ASSERT(row->linkpos[j] == -1 || SCIPrationalIsEQ(col->vals[row->linkpos[j]], row->vals[j]));
          ASSERT((j < row->nlpcols) == (row->linkpos[j] >= 0 && col->lppos >= 0));
       }
    }
@@ -188,10 +188,10 @@ SCIP_Bool colExactInSync(
    assert(colexact->index == fpcol->index);
    assert(colexact->len >= fpcol->nlprows);
 
-   assert(SCIPrationalIsApproxEqualReal(set, colexact->obj, fpcol->obj, SCIP_R_ROUND_NEAREST));
-   assert(SCIPrationalIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj, SCIP_R_ROUND_NEAREST));
-   assert(SCIPrationalIsApproxEqualReal(set, colexact->lb, fpcol->lb, SCIP_R_ROUND_DOWNWARDS) || (SCIPrationalIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
-   assert(SCIPrationalIsApproxEqualReal(set, colexact->ub, fpcol->ub, SCIP_R_ROUND_UPWARDS) || (SCIPrationalIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
+   assert(SCIPrationalIsApproxEQReal(set, colexact->obj, fpcol->obj, SCIP_R_ROUND_NEAREST));
+   assert(SCIPrationalIsApproxEQReal(set, colexact->flushedobj, fpcol->flushedobj, SCIP_R_ROUND_NEAREST));
+   assert(SCIPrationalIsApproxEQReal(set, colexact->lb, fpcol->lb, SCIP_R_ROUND_DOWNWARDS) || (SCIPrationalIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
+   assert(SCIPrationalIsApproxEQReal(set, colexact->ub, fpcol->ub, SCIP_R_ROUND_UPWARDS) || (SCIPrationalIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
 
    return TRUE;
 }
@@ -201,7 +201,7 @@ static
 SCIP_Bool rowExactInSync(
    SCIP_ROWEXACT*        rowexact,           /**< exact row */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     msg                 /**< message handler */
+   SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */ /*lint !e204*/
    )
 {
    SCIP_ROW* fprow;
@@ -217,7 +217,7 @@ SCIP_Bool rowExactInSync(
 
    synced = SCIPrationalIsGEReal(rowexact->lhs, fprow->lhs) || (SCIPrationalIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
    synced = synced && (SCIPrationalIsLEReal(rowexact->rhs, fprow->rhs) || (SCIPrationalIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
-   synced = synced && (SCIPrationalIsApproxEqualReal(set, rowexact->constant, fprow->constant, SCIP_R_ROUND_NEAREST) );
+   synced = synced && (SCIPrationalIsApproxEQReal(set, rowexact->constant, fprow->constant, SCIP_R_ROUND_NEAREST) );
 
    if( !synced )
    {
@@ -235,12 +235,13 @@ static
 SCIP_Bool lpExactInSync(
    SCIP_LPEXACT*         lpexact,            /**< exact lp */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     msg                 /**< message handler */
+   SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */
    )
 {
 #ifndef NDEBUG
    int i;
    SCIP_LP* fplp;
+
    assert(lpexact != NULL);
 
    fplp = lpexact->fplp;
@@ -1216,7 +1217,7 @@ SCIP_RETCODE colExactChgCoefPos(
       /* delete existing coefficient */
       SCIP_CALL( colExactDelCoefPos(col, set, lp, pos) );
    }
-   else if( !SCIPrationalIsEqual(col->vals[pos], val) )
+   else if( !SCIPrationalIsEQ(col->vals[pos], val) )
    {
       /* change existing coefficient */
       SCIPrationalSetRational(col->vals[pos], val);
@@ -1449,7 +1450,7 @@ SCIP_RETCODE rowExactChgCoefPos(
       /* delete existing coefficient */
       SCIP_CALL( rowExactDelCoefPos(row, set, lp, pos) );
    }
-   else if( !SCIPrationalIsEqual(row->vals[pos], val) )
+   else if( !SCIPrationalIsEQ(row->vals[pos], val) )
    {
       /* change existing coefficient */
       SCIPrationalSetRational(row->vals[pos], val);
@@ -2196,7 +2197,7 @@ SCIP_RETCODE lpExactFlushChgCols(
 
             SCIP_CALL( SCIPlpiExactGetObj(lp->lpiexact, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiExactGetBounds(lp->lpiexact, col->lpipos, col->lpipos, &lpilb, &lpiub) );
-            assert(SCIPrationalIsEqual(lpiobj, col->flushedobj));
+            assert(SCIPrationalIsEQ(lpiobj, col->flushedobj));
             SCIPrationalFreeBuffer(set->buffer, &lpiub);
             SCIPrationalFreeBuffer(set->buffer, &lpilb);
             SCIPrationalFreeBuffer(set->buffer, &lpiobj);
@@ -2205,7 +2206,7 @@ SCIP_RETCODE lpExactFlushChgCols(
 
          if( col->objchanged )
          {
-            if( SCIPrationalIsEqual(col->flushedobj, col->obj) ) /*lint !e777*/
+            if( SCIPrationalIsEQ(col->flushedobj, col->obj) ) /*lint !e777*/
             {
                assert(nobjchg < lp->ncols);
                objind[nobjchg] = col->lpipos;
@@ -2218,7 +2219,7 @@ SCIP_RETCODE lpExactFlushChgCols(
 
          if( col->lbchanged || col->ubchanged )
          {
-            if( !SCIPrationalIsEqual(col->flushedlb, col->lb) || !SCIPrationalIsEqual(col->flushedub, col->ub) ) /*lint !e777*/
+            if( !SCIPrationalIsEQ(col->flushedlb, col->lb) || !SCIPrationalIsEQ(col->flushedub, col->ub) ) /*lint !e777*/
             {
                assert(nbdchg < lp->ncols);
                bdind[nbdchg] = col->lpipos;
@@ -2318,8 +2319,8 @@ SCIP_RETCODE lpExactFlushChgRows(
             SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &lpirhs) );
 
             SCIP_CALL( SCIPlpiExactGetSides(lp->lpiexact, row->lpipos, row->lpipos, &lpilhs, &lpirhs) );
-            assert(SCIPrationalIsEqual(lpilhs, row->flushedlhs));
-            assert(SCIPrationalIsEqual(lpirhs, row->flushedrhs));
+            assert(SCIPrationalIsEQ(lpilhs, row->flushedlhs));
+            assert(SCIPrationalIsEQ(lpirhs, row->flushedrhs));
 
             SCIPrationalFreeBuffer(set->buffer, &lpirhs);
             SCIPrationalFreeBuffer(set->buffer, &lpilhs);
@@ -2335,7 +2336,7 @@ SCIP_RETCODE lpExactFlushChgRows(
 
             SCIPrationalDiff(newlhs, row->lhs, row->constant);
             SCIPrationalDiff(newrhs, row->rhs, row->constant);
-            if( SCIPrationalIsEqual(row->flushedlhs, newlhs) || SCIPrationalIsEqual(row->flushedrhs, newrhs) ) /*lint !e777*/
+            if( SCIPrationalIsEQ(row->flushedlhs, newlhs) || SCIPrationalIsEQ(row->flushedrhs, newrhs) ) /*lint !e777*/
             {
                assert(nchg < lp->nrows);
                ind[nchg] = row->lpipos;
@@ -2871,7 +2872,7 @@ SCIP_RETCODE SCIPcolExactDelCoef(
    {
       assert(row->cols[col->linkpos[pos]] == col);
       assert(row->cols_index[col->linkpos[pos]] == col->index);
-      assert(SCIPrationalIsEqual(row->vals[col->linkpos[pos]], col->vals[pos]));
+      assert(SCIPrationalIsEQ(row->vals[col->linkpos[pos]], col->vals[pos]));
       SCIP_CALL( rowExactDelCoefPos(row, set,lp, col->linkpos[pos]) );
    }
 
@@ -2921,7 +2922,7 @@ SCIP_RETCODE SCIPcolExactChgCoef(
       {
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_index[col->linkpos[pos]] == col->index);
-         assert(SCIPrationalIsEqual(row->vals[col->linkpos[pos]], col->vals[pos]));
+         assert(SCIPrationalIsEQ(row->vals[col->linkpos[pos]], col->vals[pos]));
          SCIP_CALL( rowExactChgCoefPos(row, set, lp, col->linkpos[pos], val) );
       }
 
@@ -2975,7 +2976,7 @@ SCIP_RETCODE SCIPcolExactIncCoef(
       {
          assert(row->cols[col->linkpos[pos]] == col);
          assert(row->cols_index[col->linkpos[pos]] == col->index);
-         assert(SCIPrationalIsEqual(row->vals[col->linkpos[pos]], col->vals[pos]));
+         assert(SCIPrationalIsEQ(row->vals[col->linkpos[pos]], col->vals[pos]));
 
          SCIPrationalAdd(incval, incval, col->vals[pos]);
          SCIP_CALL( rowExactChgCoefPos(row, set, lp, col->linkpos[pos], incval) );
@@ -3007,7 +3008,7 @@ SCIP_RETCODE SCIPcolExactChgObj(
    SCIPrationalDebugMessage("changing objective value of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->obj, newobj);
 
    /* only add actual changes */
-   if( !SCIPrationalIsEqual(col->obj, newobj) )
+   if( !SCIPrationalIsEQ(col->obj, newobj) )
    {
       /* only variables with a real position in the LPI can be inserted */
       if( col->lpipos >= 0 )
@@ -3054,7 +3055,7 @@ SCIP_RETCODE SCIPcolExactChgLb(
    SCIPrationalDebugMessage("changing lower bound of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->lb, newlb);
 
    /* only add actual changes */
-   if( !SCIPrationalIsEqual(col->lb, newlb) )
+   if( !SCIPrationalIsEQ(col->lb, newlb) )
    {
       /* only variables with a real position in the LPI can be inserted */
       if( col->lpipos >= 0 )
@@ -3099,7 +3100,7 @@ SCIP_RETCODE SCIPcolExactChgUb(
    SCIPrationalDebugMessage("changing upper bound of column <%s> from %q to %q\n", SCIPvarGetName(col->var), col->ub, newub);
 
    /* only add actual changes */
-   if( !SCIPrationalIsEqual(col->ub, newub) )
+   if( !SCIPrationalIsEQ(col->ub, newub) )
    {
       /* only variables with a real position in the LPI can be inserted */
       if( col->lpipos >= 0 )
@@ -3243,7 +3244,7 @@ SCIP_RETCODE SCIProwExactCreate(
    return SCIP_OKAY;
 } /*lint !e715*/
 
-/** changes an exact row, so that all denominators are bounded by set->exact_cutmaxdenomsize */
+/** changes an exact row, so that all denominators are bounded by set->exact_cutmaxdenom */
 static
 SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    SCIP_ROW*             row,                /**< SCIP row */
@@ -3264,7 +3265,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    int forcegreater;
 
    assert(row != NULL);
-   assert(set->exact_cutmaxdenomsize > 0);
+   assert(set->exact_cutmaxdenom > 0);
    assert(set->exact_cutapproxmaxboundval >= 0);
 
    SCIPdebugMessage("approximating row ");
@@ -3276,7 +3277,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 
    rhschange = 0;
    maxboundval = set->exact_cutapproxmaxboundval;
-   maxdenom = set->exact_cutmaxdenomsize;
+   maxdenom = set->exact_cutmaxdenom;
 
    assert(maxdenom >= 0);
    assert(maxboundval >= 0);
@@ -3361,7 +3362,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 /** creates and captures an exact LP row from a fp row
  *
  *  @note This may change the floating-point coefficients slightly if the rational representation is rounded to smaller
- *  denominators according to parameter exact/cutmaxdenomsize.
+ *  denominators according to parameter exact/cutmaxdenom.
  */
 SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIP_ROW*             fprow,              /**< corresponding fp row to create from */
@@ -3416,7 +3417,7 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
    SCIPrationalSetReal(tmpval, SCIProwGetConstant(fprow));
    SCIP_CALL( SCIProwExactAddConstant(workrow, set, stat, lp, tmpval) );
 
-   if( set->exact_cutmaxdenomsize > 0 )
+   if( set->exact_cutmaxdenom > 0 )
    {
       SCIP_CALL( rowExactCreateFromRowLimitEncodingLength(fprow, workrow, set, blkmem, eventqueue, lp) );
       SCIProwRecalcNorms(fprow, set);
@@ -3912,7 +3913,7 @@ SCIP_Bool SCIPlpExactProjectShiftPossible(
 SCIP_Bool SCIPlpExactIsSynced(
    SCIP_LPEXACT*         lp,                 /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     msg                 /**< message handler */
+   SCIP_MESSAGEHDLR*     msg                 /**< message handler for debug output */
    )
 {
    assert(lp != NULL);
@@ -4036,7 +4037,7 @@ SCIP_RETCODE SCIPlpExactFree(
 {
    int i;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(lp != NULL);
@@ -4086,7 +4087,7 @@ SCIP_RETCODE SCIPlpExactAddCol(
    SCIP_COLEXACT*        col                 /**< LP column */
    )
 {
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(lp != NULL);
@@ -4177,7 +4178,7 @@ SCIP_RETCODE SCIPlpExactSetCutoffbound(
 {
    SCIP_RATIONAL* tmpobj;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(lpexact != NULL);
@@ -4305,7 +4306,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    assert(lpexact->fplp != NULL);
    assert(set != NULL);
    assert(lperror != NULL);
-   assert(set->exact_enabled);
+   assert(set->exact_enable);
 
    SCIP_CALL( SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, (int) set->exact_lpinfo) );
    algo = set->lp_initalgorithm;
@@ -5246,7 +5247,7 @@ SCIP_RETCODE SCIProwExactDelCoef(
    if( row->linkpos[pos] >= 0 )
    {
       assert(col->rows[row->linkpos[pos]] == row);
-      assert(SCIPrationalIsEqual(col->vals[row->linkpos[pos]], row->vals[pos]));
+      assert(SCIPrationalIsEQ(col->vals[row->linkpos[pos]], row->vals[pos]));
       SCIP_CALL( colExactDelCoefPos(col, set, lp, row->linkpos[pos]) );
    }
 
@@ -5297,7 +5298,7 @@ SCIP_RETCODE SCIProwExactChgCoef(
       if( row->linkpos[pos] >= 0 )
       {
          assert(col->rows[row->linkpos[pos]] == row);
-         assert(SCIPrationalIsEqual(col->vals[row->linkpos[pos]], row->vals[pos]));
+         assert(SCIPrationalIsEQ(col->vals[row->linkpos[pos]], row->vals[pos]));
          SCIP_CALL( colExactChgCoefPos(col, set, lp, row->linkpos[pos], val) );
       }
 
@@ -5356,7 +5357,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
       if( row->linkpos[pos] >= 0 )
       {
          assert(col->rows[row->linkpos[pos]] == row);
-         assert(SCIPrationalIsEqual(col->vals[row->linkpos[pos]], row->vals[pos]));
+         assert(SCIPrationalIsEQ(col->vals[row->linkpos[pos]], row->vals[pos]));
          SCIP_CALL( colExactChgCoefPos(col, set, lp, row->linkpos[pos], tmp) );
       }
 
@@ -5389,7 +5390,7 @@ SCIP_RETCODE SCIProwExactChgConstant(
    assert(lp != NULL);
    assert(!lp->fplp->diving || row->fprow->lppos == -1);
 
-   if( !SCIPrationalIsEqual(constant, row->constant) )
+   if( !SCIPrationalIsEQ(constant, row->constant) )
    {
       if( row->fprow->validpsactivitydomchg == stat->domchgcount )
       {
@@ -6105,7 +6106,7 @@ SCIP_RETCODE getObjvalDeltaObjExact(
    assert(!SCIPrationalIsAbsInfinity(newobj));
    assert(!SCIPrationalIsInfinity(lb));
    assert(!SCIPrationalIsNegInfinity(ub));
-   assert(!SCIPrationalIsEqual(oldobj, newobj));
+   assert(!SCIPrationalIsEQ(oldobj, newobj));
 
    SCIPrationalSetReal(deltaval, 0.0);
    SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &tmp) );
@@ -6423,7 +6424,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
    assert(lp != NULL);
    assert(var != NULL);
 
-   if( !SCIPrationalIsEqual(oldobj, newobj) )
+   if( !SCIPrationalIsEQ(oldobj, newobj) )
    {
       SCIP_RATIONAL* deltaval;
       int deltainf = 0;
@@ -6433,8 +6434,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
       /* the objective coefficient can only be changed during presolving, that implies that the global and local
        * domain of the variable are the same
        */
-      assert(lp->fplp->probing || SCIPrationalIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)));
-      assert(lp->fplp->probing || SCIPrationalIsEqual(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbLocalExact(var)));
+      assert(lp->fplp->probing || SCIPrationalIsEQ(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)));
+      assert(lp->fplp->probing || SCIPrationalIsEQ(SCIPvarGetUbGlobalExact(var), SCIPvarGetUbLocalExact(var)));
 
       SCIP_CALL( SCIPrationalCreateBuffer(set->buffer, &deltaval) );
 
@@ -6471,7 +6472,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPrationalIsEqual(oldlb, newlb) && SCIPrationalIsPositive(SCIPvarGetObjExact(var)) )
+   if( !SCIPrationalIsEQ(oldlb, newlb) && SCIPrationalIsPositive(SCIPvarGetObjExact(var)) )
    {
       SCIP_RATIONAL* deltaval;
       int deltainf;
@@ -6503,7 +6504,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPrationalIsEqual(oldlb, newlb) && SCIPrationalIsPositive(SCIPvarGetObjExact(var)) )
+   if( !SCIPrationalIsEQ(oldlb, newlb) && SCIPrationalIsPositive(SCIPvarGetObjExact(var)) )
    {
       SCIP_RATIONAL* deltaval;
       int deltainf;
@@ -6538,7 +6539,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarUbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPrationalIsEqual(oldub, newub) && SCIPrationalIsNegative(SCIPvarGetObjExact(var)) )
+   if( !SCIPrationalIsEQ(oldub, newub) && SCIPrationalIsNegative(SCIPvarGetObjExact(var)) )
    {
       SCIP_RATIONAL* deltaval;
       int deltainf;
@@ -6570,7 +6571,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarUb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( !SCIPrationalIsEqual(oldub, newub) && SCIPrationalIsNegative(SCIPvarGetObjExact(var)) )
+   if( !SCIPrationalIsEQ(oldub, newub) && SCIPrationalIsNegative(SCIPvarGetObjExact(var)) )
    {
       SCIP_RATIONAL* deltaval;
       int deltainf;
@@ -6601,7 +6602,7 @@ SCIP_RETCODE SCIPlpExactUpdateAddVar(
 {
    SCIP_RATIONAL* tmp;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(lpexact != NULL);
@@ -7120,11 +7121,11 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            rayfeasible         /**< pointer to store whether the primal ray is a feasible unboundedness proof, or NULL */
-   )
+   )  /*lint --e{715}*/
 {
    SCIPerrorMessage("Unbounded solution not implemented in exact solving mode.\n");
    return SCIP_ERROR;
-} /*lint !e715*/
+}
 
 /** returns primal ray proving the unboundedness of the current LP */
 SCIP_RETCODE SCIPlpExactGetPrimalRay(
@@ -7280,7 +7281,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
                SCIProwGetName(lpirows[r]->fprow), lpirows[r]->lhs, lpirows[r]->rhs,
                lpirows[r]->constant, dualfarkas[r]);
 
-            *valid = FALSE; /*lint !e613*/
+               *valid = FALSE; /*lint --e{413,613}*/
 
             goto TERMINATE;
          }
@@ -7371,7 +7372,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    {
       SCIPrationalDebugMessage("farkas proof is invalid: maxactivity=%q, lhs=%q\n", maxactivity, farkaslhs);
 
-      *valid = FALSE; /*lint !e613*/
+      *valid = FALSE; /*lint --e{413,613}*/
    }
 
   TERMINATE:
@@ -7548,7 +7549,7 @@ SCIP_RETCODE SCIPlpExactReset(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    assert(stat != NULL);
@@ -7595,7 +7596,7 @@ void SCIPlpExactForceExactSolve(
 {
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return;
 
    assert(lpexact != NULL);
@@ -7611,7 +7612,7 @@ void SCIPlpExactForceSafeBound(
 {
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return;
 
    assert(lpexact != NULL);
@@ -7628,7 +7629,7 @@ void SCIPlpExactAllowExactSolve(
 {
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return;
 
    assert(lpexact != NULL);
@@ -8040,7 +8041,7 @@ SCIP_RETCODE SCIProwExactChgLhs(
    assert(rowexact != NULL);
    assert(lpexact != NULL);
 
-   if( !SCIPrationalIsEqual(rowexact->lhs, lhs) )
+   if( !SCIPrationalIsEQ(rowexact->lhs, lhs) )
    {
       SCIPrationalSetRational(rowexact->lhs, lhs);
       rowexact->lhsreal = SCIPrationalRoundReal(rowexact->lhs, SCIP_R_ROUND_DOWNWARDS);
@@ -8061,7 +8062,7 @@ SCIP_RETCODE SCIProwExactChgRhs(
    assert(rowexact != NULL);
    assert(lpexact != NULL);
 
-   if( !SCIPrationalIsEqual(rowexact->rhs, rhs) )
+   if( !SCIPrationalIsEQ(rowexact->rhs, rhs) )
    {
       SCIPrationalSetRational(rowexact->rhs, rhs);
       rowexact->rhsreal = SCIPrationalRoundReal(rowexact->rhs, SCIP_R_ROUND_UPWARDS);
@@ -8196,9 +8197,9 @@ SCIP_RETCODE SCIPlpExactStartDive(
       assert(lpexact->cols[c]->var != NULL);
       assert(SCIPvarGetStatusExact(lpexact->cols[c]->var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetColExact(lpexact->cols[c]->var) == lpexact->cols[c]);
-      assert(SCIPrationalIsEqual(SCIPvarGetObjExact(lpexact->cols[c]->var), lpexact->cols[c]->obj));
-      assert(SCIPrationalIsEqual(SCIPvarGetLbLocalExact(lpexact->cols[c]->var), lpexact->cols[c]->lb));
-      assert(SCIPrationalIsEqual(SCIPvarGetUbLocalExact(lpexact->cols[c]->var), lpexact->cols[c]->ub));
+      assert(SCIPrationalIsEQ(SCIPvarGetObjExact(lpexact->cols[c]->var), lpexact->cols[c]->obj));
+      assert(SCIPrationalIsEQ(SCIPvarGetLbLocalExact(lpexact->cols[c]->var), lpexact->cols[c]->lb));
+      assert(SCIPrationalIsEQ(SCIPvarGetUbLocalExact(lpexact->cols[c]->var), lpexact->cols[c]->ub));
    }
 #endif
 
@@ -8402,9 +8403,9 @@ SCIP_RETCODE SCIPlpExactEndDive(
          assert(lpexact->cols[c]->var != NULL);
          assert(SCIPvarGetStatusExact(lpexact->cols[c]->var) == SCIP_VARSTATUS_COLUMN);
          assert(SCIPvarGetColExact(lpexact->cols[c]->var) == lpexact->cols[c]);
-         assert(SCIPrationalIsEqual(SCIPvarGetObjExact(lpexact->cols[c]->var), lpexact->cols[c]->obj));
-         assert(SCIPrationalIsEqual(SCIPvarGetLbLocalExact(lpexact->cols[c]->var), lpexact->cols[c]->lb));
-         assert(SCIPrationalIsEqual(SCIPvarGetUbLocalExact(lpexact->cols[c]->var), lpexact->cols[c]->ub));
+         assert(SCIPrationalIsEQ(SCIPvarGetObjExact(lpexact->cols[c]->var), lpexact->cols[c]->obj));
+         assert(SCIPrationalIsEQ(SCIPvarGetLbLocalExact(lpexact->cols[c]->var), lpexact->cols[c]->lb));
+         assert(SCIPrationalIsEQ(SCIPvarGetUbLocalExact(lpexact->cols[c]->var), lpexact->cols[c]->ub));
       }
    }
 #endif
@@ -8478,7 +8479,7 @@ SCIP_RETCODE SCIPlpExactSyncLPs(
    int i;
    SCIP_Bool removecut;
 
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
       return SCIP_OKAY;
 
    fplp = lpexact->fplp;

@@ -280,7 +280,7 @@ void checkProbHasContEqs(
       if( SCIPconsGetHdlr(conss[c]) == SCIPfindConshdlr(scip, "exactlinear") )
       {
          /* constraint is an equality constraint */
-         if( SCIPrationalIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/
+         if( SCIPrationalIsEQ(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/
          {
             /* check if there are continuous variables involved */
             SCIP_VAR** vars = SCIPgetVarsExactLinear(scip, conss[c]);
@@ -572,7 +572,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
              * solution with integral value exist; in this case we currently round and fix its value
              */
             /**@todo once implied integrality detection is made exact, test whether it improves performance to leave
-             *       weakly implied variables unfixed or fix them only if they take a nearly integral value
+             *       continuous implied integral variables unfixed or fix them only if they take a nearly integral value
              */
             if( SCIPisIntegral(scip, solval) || SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
             {
@@ -704,6 +704,9 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    assert(scip != NULL);
    assert(conshdlr != NULL );
 
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -734,6 +737,9 @@ SCIP_DECL_CONSEXIT(consExitExactSol)
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
+
+   if( !SCIPisExact(scip) )
+      return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

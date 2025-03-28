@@ -81,6 +81,7 @@
 #include "scip/reopt.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_certificate.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
@@ -500,6 +501,8 @@ SCIP_RETCODE initPresolve(
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
+      if( scip->set->exact_enable )
+         SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
 
       /* update primal-dual integrals */
       if( scip->set->misc_calcintegral )
@@ -509,6 +512,8 @@ SCIP_RETCODE initPresolve(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
       scip->stat->lastlowerbound = scip->tree->root->lowerbound;
+      if( scip->set->exact_enable )
+         SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
 
    /* GCG wants to perform presolving during the reading process of a file reader;
@@ -1564,7 +1569,7 @@ SCIP_RETCODE initSolve(
    /* possibly create visualization output file */
    SCIP_CALL( SCIPvisualInit(scip->stat->visual, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
-   /* possibly create certificate output file */
+   /* possibly create certificate output files */
    SCIP_CALL( SCIPcertificateInit(scip, scip->stat->certificate, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
    /* initialize solution process data structures */
@@ -1591,6 +1596,8 @@ SCIP_RETCODE initSolve(
       scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
       scip->tree->root->estimate = scip->tree->root->lowerbound;
       scip->stat->rootlowerbound = scip->tree->root->lowerbound;
+      if( scip->set->exact_enable )
+         SCIPrationalSetReal(scip->tree->root->lowerboundexact, scip->tree->root->lowerbound);
 
       /* update primal-dual integrals */
       if( scip->set->misc_calcintegral )
@@ -1600,6 +1607,8 @@ SCIP_RETCODE initSolve(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_DUALBOUNDIMPROVED) );
       SCIP_CALL( SCIPeventProcess(&event, scip->set, NULL, NULL, NULL, scip->eventfilter) );
       scip->stat->lastlowerbound = scip->tree->root->lowerbound;
+      if( scip->set->exact_enable )
+         SCIPrationalSetRational(scip->stat->lastlowerboundexact, scip->tree->root->lowerboundexact);
    }
 
    /* inform the transformed problem that the branch and bound process starts now */
@@ -2191,7 +2200,7 @@ SCIP_RETCODE displayRelevantStats(
          else
             SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
-      if( scip->set->exact_enabled && scip->primal->nsolsfound > 0 )
+      if( scip->set->exact_enable && scip->primal->nsolsfound > 0 )
       {
          SCIP_RATIONAL* objval;
          SCIP_CALL( SCIPrationalCreateBuffer(SCIPbuffer(scip), &objval) );
@@ -2592,7 +2601,7 @@ SCIP_RETCODE SCIPpresolve(
       SCIP_CALL( displayRelevantStats(scip) );
    }
 
-   if( scip->set->exact_enabled && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
+   if( scip->set->exact_enable && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
    {
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_DIALOG, "\n");
       SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "
@@ -2933,7 +2942,7 @@ SCIP_RETCODE SCIPsolve(
    }
 
    /* we can't call SCIPgetDualbound after exitsolve, so we save the final dual bound here */
-   SCIP_CALL( SCIPcertificateSaveFinalbound(scip, scip->set, SCIPgetCertificate(scip)) );
+   SCIP_CALL( SCIPcertificateSaveFinalbound(scip, SCIPgetCertificate(scip)) );
 
    return SCIP_OKAY;
 }
@@ -3210,7 +3219,7 @@ SCIP_RETCODE SCIPenableReoptimization(
    }
 
    /* reoptimization in combination with exact solving has not been implemented */
-   if( scip->set->exact_enabled )
+   if( scip->set->exact_enable )
    {
       SCIPerrorMessage("Reoptimization cannot (yet) be started in exact solving mode.\n");
       return SCIP_INVALIDCALL;
@@ -3393,8 +3402,7 @@ SCIP_RETCODE SCIPfreeSolve(
    case SCIP_STAGE_PRESOLVED:
       /* switch stage to TRANSFORMED */
       scip->set->stage = SCIP_STAGE_TRANSFORMED;
-      /* possibly close CERTIFICATE output file */
-      SCIP_CALL( SCIPcertificateExit(scip) );
+      assert(!SCIPcertificateIsEnabled(SCIPgetCertificate(scip)));
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:

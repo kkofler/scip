@@ -120,6 +120,7 @@ set(scipsources
     scip/heur_crossover.c
     scip/heur_dins.c
     scip/heur_distributiondiving.c
+    scip/heur_dks.c
     scip/heur_dps.c
     scip/heur_dualval.c
     scip/heur_farkasdiving.c
@@ -338,6 +339,7 @@ set(scipsources
     scip/scip_bandit.c
     scip/scip_benders.c
     scip/scip_branch.c
+    scip/scip_certificate.c
     scip/scip_compr.c
     scip/scip_concurrent.c
     scip/scip_conflict.c
@@ -638,6 +640,7 @@ set(scipheaders
     scip/heur_crossover.h
     scip/heur_dins.h
     scip/heur_distributiondiving.h
+    scip/heur_dks.h
     scip/heur_dps.h
     scip/heur_dualval.h
     scip/heur_farkasdiving.h
@@ -858,6 +861,7 @@ set(scipheaders
     scip/scip_bandit.h
     scip/scip_benders.h
     scip/scip_branch.h
+    scip/scip_certificate.h
     scip/scip_compr.h
     scip/scip_concurrent.h
     scip/scip_conflict.h

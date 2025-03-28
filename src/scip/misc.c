@@ -778,7 +778,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
    )
 {
    assert(sparsesol != NULL);
-   assert(vars != NULL);
+   assert(nvars == 0 || vars != NULL);
    assert(nvars >= 0);
 
    SCIP_ALLOC( BMSallocMemory(sparsesol) );
@@ -9904,7 +9904,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       gcd = ABS(numerator);
       scm = denominator;
 
-      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale); /*lint !e838*/
 
       break;
    }

@@ -89,7 +89,7 @@ SCIP_RETCODE updateLpExactBoundChange(
    )
 {
    /* do nothing if not in exact solving mode */
-   if( !set->exact_enabled )
+   if( !set->exact_enable )
     return SCIP_OKAY;
 
    assert(var != NULL);
@@ -814,7 +814,7 @@ SCIP_RETCODE SCIPeventAddExactBdChg(
 {
    assert(event != NULL);
    assert(blkmem != NULL);
-   assert(!SCIPrationalIsEqual(oldbound, newbound));
+   assert(!SCIPrationalIsEQ(oldbound, newbound));
    assert((event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED));
 
    SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(event->data.eventbdchg.oldboundexact), oldbound) );
@@ -833,7 +833,7 @@ SCIP_RETCODE SCIPeventAddExactObjChg(
 {
    assert(event != NULL);
    assert(blkmem != NULL);
-   assert(!SCIPrationalIsEqual(oldobj, newobj));
+   assert(!SCIPrationalIsEQ(oldobj, newobj));
 
    SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(event->data.eventobjchg.oldobjexact), oldobj) );
    SCIP_CALL( SCIPrationalCopyBlock(blkmem, &(event->data.eventobjchg.newobjexact), newobj) );
@@ -1888,7 +1888,7 @@ SCIP_RETCODE SCIPeventProcess(
       }
 
       /* if in exact solving mode, adjust rational lp data */
-      if( set->exact_enabled )
+      if( set->exact_enable )
       {
          SCIP_RATIONAL* newobj;
          SCIP_RATIONAL* oldobj;

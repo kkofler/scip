@@ -51,7 +51,6 @@
 #include "scip/conflict.h"
 #include "scip/debug.h"
 #include "scip/rational.h"
-#include "scip/scip_exact.h"
 #include "scip/history.h"
 #include "scip/implics.h"
 #include "scip/lp.h"
@@ -64,6 +63,8 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
+#include "scip/scip_certificate.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -544,12 +545,12 @@ SCIP_RETCODE SCIPwriteVarsLinearsumExact(
    {
       if( vals != NULL )
       {
-         if( SCIPrationalIsEqualReal(vals[v], 1.0) )
+         if( SCIPrationalIsEQReal(vals[v], 1.0) )
          {
             if( v > 0 )
                SCIPinfoMessage(scip, file, " +");
          }
-         else if( SCIPrationalIsEqualReal(vals[v], -1.0) )
+         else if( SCIPrationalIsEQReal(vals[v], -1.0) )
             SCIPinfoMessage(scip, file, " -");
          else
          {
@@ -7008,7 +7009,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || (scip->set->exact_enabled && ub < newbound))
+   if( SCIPsetIsFeasGT(scip->set, newbound, ub) || (scip->set->exact_enable && ub < newbound))
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -7122,7 +7123,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
    ub = SCIPvarGetUbLocal(var);
    assert(SCIPsetIsLE(scip->set, lb, ub));
 
-   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || (scip->set->exact_enabled && lb > newbound) )
+   if( SCIPsetIsFeasLT(scip->set, newbound, lb) || (scip->set->exact_enable && lb > newbound) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
@@ -7240,7 +7241,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    if( SCIPrationalIsLT(adjustedBound, lb) )
    {
       *infeasible = TRUE;
-      if( SCIPcertificateShouldTrackBounds(scip) )
+      if( SCIPshouldCertificateTrackBounds(scip) )
          SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip),
             var, NULL, adjustedBound, -1L, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1L) );
       goto RETURN_SCIP_OKAY;
@@ -7362,7 +7363,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    if( SCIPrationalIsGT(adjustedBound, ub) )
    {
       *infeasible = TRUE;
-      if (SCIPcertificateShouldTrackBounds(scip))
+      if (SCIPshouldCertificateTrackBounds(scip))
          SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip),
             var, adjustedBound, NULL, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) -1L, -1L) );
       goto RETURN_SCIP_OKAY;
@@ -10501,7 +10502,7 @@ SCIP_RETCODE SCIPfixVarExact(
       }
       else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
       {
-         *infeasible = !SCIPrationalIsEqual(fixedval, SCIPvarGetLbLocalExact(var));
+         *infeasible = !SCIPrationalIsEQ(fixedval, SCIPvarGetLbLocalExact(var));
          return SCIP_OKAY;
       }
    }

@@ -503,14 +503,14 @@ void SCIPrationalMax(
 
 /** checks if two rationals are equal */
 SCIP_EXPORT
-SCIP_Bool SCIPrationalIsEqual(
+SCIP_Bool SCIPrationalIsEQ(
    SCIP_RATIONAL*        r1,                 /**< the first rational */
    SCIP_RATIONAL*        r2                  /**< the second rational */
    );
 
 /** checks if two rationals are of equal absolute value */
 SCIP_EXPORT
-SCIP_Bool SCIPrationalIsAbsEqual(
+SCIP_Bool SCIPrationalIsAbsEQ(
    SCIP_RATIONAL*        r1,                 /**< the first rational */
    SCIP_RATIONAL*        r2                  /**< the second rational */
    );
@@ -518,14 +518,14 @@ SCIP_Bool SCIPrationalIsAbsEqual(
 
 /** checks if a rational and a real are equal */
 SCIP_EXPORT
-SCIP_Bool SCIPrationalIsEqualReal(
+SCIP_Bool SCIPrationalIsEQReal(
    SCIP_RATIONAL*        r1,                 /**< the rational */
    SCIP_Real             r2                  /**< the real */
    );
 
 /** checks if real approx of rational and a real are equal */
 SCIP_EXPORT
-SCIP_Bool SCIPrationalIsApproxEqualReal(
+SCIP_Bool SCIPrationalIsApproxEQReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_RATIONAL*        r1,                 /**< the rational */
    SCIP_Real             r2,                 /**< the real */
@@ -672,6 +672,7 @@ int SCIPrationalStrLen(
 /** rational extension for the SCIPdebugMsg */
 /*lint -emacro(681,SCIPrationalDebugMessage) */
 /*lint -emacro(506,SCIPrationalDebugMessage) */
+/*lint -emacro(774,SCIPrationalDebugMessage) */
 #ifdef SCIP_DEBUG
 #define SCIPrationalDebugMessage(...)            SCIPrationalPrintDebugMessage(__FILE__, __LINE__, __VA_ARGS__)
 #else
