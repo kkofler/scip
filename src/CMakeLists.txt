@@ -403,6 +403,7 @@ set(objscipsources
     objscip/objdialog.cpp
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
+    objscip/objexprhdlr.cpp
     objscip/objheur.cpp
     objscip/objmessagehdlr.cpp
     objscip/objnodesel.cpp
@@ -448,6 +449,7 @@ set(objscipheaders
     objscip/objdialog.h
     objscip/objdisp.h
     objscip/objeventhdlr.h
+    objscip/objexprhdlr.h
     objscip/objheur.h
     objscip/objmessagehdlr.h
     objscip/objnodesel.h
