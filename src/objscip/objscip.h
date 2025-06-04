@@ -41,6 +41,7 @@
 #include "objscip/objdialog.h"
 #include "objscip/objdisp.h"
 #include "objscip/objeventhdlr.h"
+#include "objscip/objexprhdlr.h"
 #include "objscip/objheur.h"
 #include "objscip/objmessagehdlr.h"
 #include "objscip/objnodesel.h"
